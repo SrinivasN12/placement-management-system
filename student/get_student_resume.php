@@ -6,7 +6,7 @@
 //
 //  Returns JSON:
 //  { found: true/false, path, original_name, uploaded_at }
-// =============================================================
+// ===============================================================
 
 require_once '../config/auth.php';
 require_once '../config/db.php';
