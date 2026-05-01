@@ -41,6 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (mysqli_stmt_execute($stmt)) {
             $drive_id = mysqli_insert_id($conn);
+
+            // ── Save custom criteria ──────────────────────────────────
+            $ccLabels    = $_POST['cc_label']     ?? [];
+            $ccTypes     = $_POST['cc_type']      ?? [];
+            $ccValues    = $_POST['cc_value']     ?? [];
+            $ccMandatory = $_POST['cc_mandatory'] ?? [];
+            $ccCount = 0;
+            foreach ($ccLabels as $n => $lbl) {
+                $lbl = trim($lbl);
+                if ($lbl === '') continue;
+                $allowed  = ['yes_no','number','text_match','checkbox'];
+                $type     = in_array($ccTypes[$n] ?? '', $allowed) ? $ccTypes[$n] : 'yes_no';
+                $val      = trim($ccValues[$n] ?? '');
+                $mand     = ((int)($ccMandatory[$n] ?? 0)) ? 1 : 0;
+                $lbl_s    = mysqli_real_escape_string($conn, $lbl);
+                $val_s    = mysqli_real_escape_string($conn, $val);
+                mysqli_query($conn,
+                    "INSERT INTO drive_custom_criteria
+                     (drive_id,criteria_label,criteria_type,criteria_value,is_mandatory)
+                     VALUES ($drive_id,'$lbl_s','$type','$val_s',$mand)");
+                $ccCount++;
+            }
+
             // Notify eligible students
             $students = mysqli_query($conn,
                 "SELECT student_id FROM student
@@ -49,15 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    AND tenth_percentage >= $min_tenth
                    AND twelfth_percentage >= $min_twelfth
                    AND degree_cgpa >= $min_deg");
-            $today = date('Y-m-d');
-            $msg = "New drive: $job_title at $company. Last date to apply: " . date('d M Y', strtotime($last_date)) . ". Check eligibility and apply!";
+            $today   = date('Y-m-d');
+            $msg     = "New drive: $job_title at $company. Last date to apply: " . date('d M Y', strtotime($last_date)) . ". Check eligibility and apply!";
             $msg_esc = mysqli_real_escape_string($conn, $msg);
             while ($s = mysqli_fetch_assoc($students)) {
                 mysqli_query($conn,
                     "INSERT INTO notification (student_id,message,is_read,date)
                      VALUES ({$s['student_id']},'$msg_esc',0,'$today')");
             }
-            $success = "Drive posted successfully! Eligible students have been notified.";
+            $ccNote  = $ccCount > 0 ? " with $ccCount custom criteri" . ($ccCount === 1 ? 'on' : 'a') : '';
+            $success = "Drive posted successfully{$ccNote}! Eligible students have been notified.";
 
             // ── Send email notifications to eligible students ──
             // This runs after the DB insert succeeds.
@@ -105,12 +129,31 @@ textarea{resize:vertical;min-height:90px}
 .error{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px}
 .back{display:inline-block;margin-bottom:18px;color:#1b5e20;text-decoration:none;font-size:13px;font-weight:600}
 .dept-tag{background:#e8f5e9;color:#1b5e20;font-weight:700;padding:10px 13px;border-radius:8px;font-size:14px;display:block;border:1.5px solid #a5d6a7}
+/* ── Custom Criteria Section ──────────────────── */
+.cc-section{background:#e3f2fd;border:2px dashed #42a5f5;border-radius:12px;padding:22px 24px;margin-top:24px}
+.cc-section-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:12px;flex-wrap:wrap}
+.cc-section-title{font-size:14px;font-weight:700;color:#0d47a1}
+.cc-section-hint{font-size:12px;color:#555;margin-top:3px;line-height:1.5}
+.btn-add-cc{background:#1976d2;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.btn-add-cc:hover{background:#0d47a1}
+.cc-row{background:#fff;border:1.5px solid #bbdefb;border-radius:10px;padding:14px 16px;margin-top:12px}
+.cc-row-inner{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.cc-fg{display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px}
+.cc-fg label{font-size:11px;font-weight:600;color:#444}
+.cc-input{padding:8px 11px;border:1.5px solid #ddd;border-radius:7px;font-size:13px;outline:none;width:100%;font-family:inherit}
+.cc-input:focus{border-color:#1976d2}
+.cc-mand{display:flex;align-items:center;gap:6px;font-size:12px;color:#444;font-weight:600;cursor:pointer;padding-bottom:8px}
+.cc-mand input{width:15px;height:15px;cursor:pointer;accent-color:#1976d2}
+.btn-cc-remove{background:#ffebee;color:#c62828;border:1.5px solid #ef9a9a;padding:7px 12px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;align-self:flex-end}
+.btn-cc-remove:hover{background:#ffcdd2}
 @media(max-width:600px){
   .navbar{padding:12px 16px;}
   .page-wrap{padding:20px 16px;}
   .card{padding:20px 18px;}
   .form-row{flex-direction:column;}
   .btn{width:100%;}
+  .cc-row-inner{flex-direction:column;}
+  .btn-add-cc{width:100%;}
 }
 </style>
 </head><body>
@@ -181,19 +224,93 @@ textarea{resize:vertical;min-height:90px}
              min="<?= date('Y-m-d') ?>" required></div>
   </div>
 
-  <button type="submit" class="btn">📢 Post Drive &amp; Notify Students →</button>
+  <!-- ── Custom Criteria Section ─────────────────────────── -->
+  <div class="cc-section">
+    <div class="cc-section-hd">
+      <div>
+        <div class="cc-section-title">🎯 Additional Custom Criteria <span style="font-weight:400;font-size:12px;color:#666">(Optional)</span></div>
+        <div class="cc-section-hint">Add extra requirements beyond standard criteria — e.g. Driving License, Tally Knowledge, Work Experience, Internship</div>
+      </div>
+      <button type="button" class="btn-add-cc" onclick="addCriteriaRow()">+ Add Criteria</button>
+    </div>
+    <div id="criteriaRows"></div>
+  </div>
+
+  <button type="submit" class="btn" style="margin-top:20px">📢 Post Drive &amp; Notify Students →</button>
 </form>
 </div>
 </div>
 <script>
-  // Ensure last_date <= drive_date
-  document.querySelector('form').addEventListener('submit', function(e){
-    const ld = document.querySelector('[name=last_date]').value;
-    const dd = document.querySelector('[name=drive_date]').value;
-    if(ld && dd && ld > dd){
-      e.preventDefault();
-      alert('Last Date to Apply must be on or before the Drive Date.');
-    }
-  });
+// ── Date validation ────────────────────────────────────────────
+document.querySelector('form').addEventListener('submit', function(e){
+  const ld = document.querySelector('[name=last_date]').value;
+  const dd = document.querySelector('[name=drive_date]').value;
+  if(ld && dd && ld > dd){
+    e.preventDefault();
+    alert('Last Date to Apply must be on or before the Drive Date.');
+  }
+});
+
+// ── Custom criteria rows ───────────────────────────────────────
+let _ccN = 0;
+
+function addCriteriaRow() {
+  _ccN++;
+  const n = _ccN;
+  const div = document.createElement('div');
+  div.className = 'cc-row';
+  div.id = 'ccrow-' + n;
+  div.innerHTML = `
+    <div class="cc-row-inner">
+      <div class="cc-fg">
+        <label>Criteria Label *</label>
+        <input type="text" name="cc_label[${n}]" class="cc-input" placeholder="e.g. Driving License" required>
+      </div>
+      <div class="cc-fg">
+        <label>Type</label>
+        <select name="cc_type[${n}]" class="cc-input" onchange="updateCcValue(this,${n})">
+          <option value="yes_no">Yes / No</option>
+          <option value="number">Minimum Number</option>
+          <option value="text_match">Must Know (Text)</option>
+          <option value="checkbox">Must Have Done</option>
+        </select>
+      </div>
+      <div class="cc-fg" id="ccval-${n}">
+        <label>Expected Value</label>
+        <select name="cc_value[${n}]" class="cc-input">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="cc-fg" style="flex:0;min-width:auto">
+        <label>&nbsp;</label>
+        <label class="cc-mand">
+          <input type="hidden"   name="cc_mandatory[${n}]" value="0">
+          <input type="checkbox" name="cc_mandatory[${n}]" value="1" checked>
+          Mandatory
+        </label>
+      </div>
+      <div style="align-self:flex-end">
+        <button type="button" class="btn-cc-remove" onclick="document.getElementById('ccrow-${n}').remove()">✕ Remove</button>
+      </div>
+    </div>`;
+  document.getElementById('criteriaRows').appendChild(div);
+}
+
+function updateCcValue(sel, n) {
+  const wrap = document.getElementById('ccval-' + n);
+  const type = sel.value;
+  let inner = '';
+  if (type === 'yes_no') {
+    inner = `<select name="cc_value[${n}]" class="cc-input"><option value="Yes">Yes</option><option value="No">No</option></select>`;
+  } else if (type === 'number') {
+    inner = `<input type="number" name="cc_value[${n}]" class="cc-input" min="0" step="0.1" placeholder="e.g. 1 for 1 year">`;
+  } else if (type === 'text_match') {
+    inner = `<input type="text" name="cc_value[${n}]" class="cc-input" placeholder="e.g. Tally, SAP, Python">`;
+  } else {
+    inner = `<input type="text" name="cc_value[${n}]" class="cc-input" placeholder="e.g. Internship, NSS">`;
+  }
+  wrap.innerHTML = '<label>Expected Value</label>' + inner;
+}
 </script>
 </body></html>
