@@ -1,0 +1,5 @@
+# Prevent execution of PHP and other scripts in uploads
+# This is a security measure for uploaded files
+<FilesMatch "\.(php|php5|phtml|pl|py|cgi)$">
+    Deny from all
+</FilesMatch>

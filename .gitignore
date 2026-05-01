@@ -1,0 +1,14 @@
+# ── Composer / Dependencies ────────────────────────────────────
+/vendor/
+composer.lock
+
+# ── SMTP Credentials — NEVER commit this file ─────────────────
+/config/email_config.php
+
+# ── Runtime logs ──────────────────────────────────────────────
+/logs/*.log
+
+# ── Misc ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.env
