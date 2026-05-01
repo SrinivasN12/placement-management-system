@@ -18,7 +18,7 @@ if ($role_id != 1) {
 }
 
 // ── Gemini API key — replace with your actual key ────────────
-$geminiApiKey = 'AIzaSyAjTtX-YHN3AS4k3yXXj6oi7eYC8Sy6f3c';
+$geminiApiKey = 'AIzaSyBZgIiA4FYjCsa-HjgHEZcH4L2_Zkn7ASo';
 
 // ── Gemini model endpoint ─────────────────────────────────────
 // Using gemini-2.0-flash (gemini-1.5-flash was retired in 2025)

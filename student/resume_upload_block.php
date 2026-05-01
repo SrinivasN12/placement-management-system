@@ -264,7 +264,7 @@
     <div class="rub-icon">📄</div>
     <div>
       <div class="rub-title">Upload Resume to Auto-Fill</div>
-      <div class="rub-subtitle">PDF only · Max 2 MB</div>
+      <div class="rub-subtitle">PDF only · Max 2 MB · AI extracts your profile details</div>
     </div>
   </div>
 
@@ -277,6 +277,14 @@
       📎 Choose PDF Resume
     </button>
     <span id="rubFileName">No file chosen</span>
+  </div>
+
+  <!-- Overwrite toggle ───────────────────────────────────────── -->
+  <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+    <input type="checkbox" id="rubOverwrite" style="width:15px;height:15px;cursor:pointer;accent-color:#4a6cf7;">
+    <label for="rubOverwrite" style="font-size:12px;color:#444;cursor:pointer;margin:0;">
+      ♻️ Overwrite existing profile data with values from resume
+    </label>
   </div>
 
   <!-- Status / feedback message ──────────────────────────────── -->
@@ -393,6 +401,7 @@
     };
 
     var filledCount = 0;
+    var overwrite = document.getElementById('rubOverwrite') && document.getElementById('rubOverwrite').checked;
 
     Object.keys(fieldMap).forEach(function (geminiKey) {
       var formName = fieldMap[geminiKey];
@@ -403,10 +412,10 @@
       var el = document.querySelector('[name="' + formName + '"]');
       if (!el) return;
 
-      // Only fill if field is currently empty / zero
+      // Only fill empty fields — unless overwrite checkbox is checked
       var currentVal = el.value.trim();
       var isEmpty = currentVal === '' || currentVal === '0' || currentVal === '0.00';
-      if (!isEmpty) return; // respect existing data
+      if (!isEmpty && !overwrite) return; // respect existing data unless overwrite is on
 
       // For <select> elements, try to find a matching option (case-insensitive)
       if (el.tagName === 'SELECT') {
