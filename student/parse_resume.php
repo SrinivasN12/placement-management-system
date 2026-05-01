@@ -21,8 +21,9 @@ if ($role_id != 1) {
 $geminiApiKey = 'AIzaSyAjTtX-YHN3AS4k3yXXj6oi7eYC8Sy6f3c';
 
 // ── Gemini model endpoint ─────────────────────────────────────
+// Using gemini-2.0-flash (gemini-1.5-flash was retired in 2025)
 $geminiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/'
-    . 'models/gemini-1.5-flash:generateContent?key=' . $geminiApiKey;
+    . 'models/gemini-2.0-flash:generateContent?key=' . $geminiApiKey;
 
 // ── JSON response helper ──────────────────────────────────────
 header('Content-Type: application/json');
@@ -113,7 +114,7 @@ curl_setopt_array($ch, [
         'Content-Length: ' . strlen($requestBody),
     ],
     CURLOPT_TIMEOUT => 60, // 60-second timeout for large PDFs
-    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYPEER => false, // Disable SSL verify for XAMPP local env
 ]);
 
 $response = curl_exec($ch);
@@ -133,7 +134,18 @@ $geminiResponse = json_decode($response, true);
 if ($httpCode !== 200 || !isset($geminiResponse['candidates'][0]['content']['parts'][0]['text'])) {
     // Log the raw Gemini error for debugging (not sent to client)
     error_log('Gemini API error (' . $httpCode . '): ' . $response);
-    echo json_encode(['error' => 'Could not read resume. Please fill manually.']);
+    // Return a more specific error based on HTTP code
+    $errMsg = 'Could not read resume. Please fill manually.';
+    if ($httpCode === 404) {
+        $errMsg = 'AI model unavailable. Please fill manually.';
+    } elseif ($httpCode === 429) {
+        $errMsg = 'AI quota exceeded. Please try again later or fill manually.';
+    } elseif ($httpCode === 403 || $httpCode === 401) {
+        $errMsg = 'AI API key invalid. Please fill manually.';
+    } elseif ($httpCode === 0) {
+        $errMsg = 'Cannot reach AI service. Check internet connection.';
+    }
+    echo json_encode(['error' => $errMsg]);
     exit();
 }
 
