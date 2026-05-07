@@ -6,6 +6,9 @@ if ($role_id != 1) { header("Location: ../index.php"); exit(); }
 $student_id = (int)($_SESSION['student_id'] ?? 0);
 $success = $error = "";
 
+// Ensure linkedin column exists (IF NOT EXISTS avoids duplicate-column exception)
+@mysqli_query($conn, "ALTER TABLE student ADD COLUMN IF NOT EXISTS linkedin VARCHAR(255) DEFAULT '' AFTER city");
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validate_csrf();
     $batch      = trim($_POST['batch']);
@@ -34,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              tenth_percentage=?,twelfth_percentage=?,degree_cgpa=?,
              contact_number=?,country=?,state=?,city=?
              WHERE student_id=?");
+        // type: s=batch,s=spec,d=cgpa,i=backlogs,d=10th,d=12th,d=degcgpa,s=contact,s=country,s=state,s=city,i=id
+        // 12 variables → 12 type chars: ssdidddssssi
         mysqli_stmt_bind_param($stmt, "ssdidddssssi",
             $batch, $spec, $cgpa, $backlogs,
             $tenth, $twelfth, $deg_cgpa,
@@ -223,8 +228,15 @@ const profileFields = <?= json_encode($pc_fields) ?>;
     <div class="info-row"><span class="lbl">Batch</span><span class="val"><?= htmlspecialchars($s['batch'] ?? '—') ?></span></div>
     <div class="info-row"><span class="lbl">Specialization</span><span class="val"><?= htmlspecialchars($s['specialization'] ?? '—') ?></span></div>
     <div class="info-row"><span class="lbl">Contact</span><span class="val"><?= htmlspecialchars($s['contact_number'] ?? '—') ?></span></div>
-    <div class="info-row"><span class="lbl">City / State</span><span class="val"><?= htmlspecialchars(($s['city'] ?? '') . ', ' . ($s['state'] ?? '')) ?></span></div>
-    <div class="info-row"><span class="lbl">Country</span><span class="val"><?= htmlspecialchars($s['country'] ?? '—') ?></span></div>
+    <div class="info-row"><span class="lbl">City / State</span><span class="val"><?php
+      $cityState = array_filter([trim($s['city'] ?? ''), trim($s['state'] ?? '')]);
+      echo htmlspecialchars($cityState ? implode(', ', $cityState) : '—');
+    ?></span></div>
+    <div class="info-row"><span class="lbl">Country</span><span class="val"><?= htmlspecialchars(trim($s['country'] ?? '') ?: '—') ?></span></div>
+    <div class="info-row"><span class="lbl">LinkedIn</span><span class="val"><?php
+      $li = trim($s['linkedin'] ?? '');
+      echo $li ? '<a href="' . htmlspecialchars($li) . '" target="_blank" style="color:#1a237e;word-break:break-all">' . htmlspecialchars($li) . '</a>' : '—';
+    ?></span></div>
   </div>
   <div class="section-title" style="margin-top:16px">Academic Background</div>
   <div class="info-grid">
@@ -326,8 +338,6 @@ const profileFields = <?= json_encode($pc_fields) ?>;
         <label>Country</label>
         <input type="text" name="country" value="<?= htmlspecialchars($s['country'] ?? '') ?>" placeholder="India">
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>State</label>
         <input type="text" name="state" value="<?= htmlspecialchars($s['state'] ?? '') ?>">
