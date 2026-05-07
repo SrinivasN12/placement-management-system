@@ -1,19 +1,11 @@
 <?php
-// student/resume_upload_block.php - Self-contained resume-upload widget.
-// Include this file anywhere inside the <body> of profile.php.
-// No closing tag issue: comments below are HTML, not PHP.
+// student/resume_upload_block.php — Self-contained resume-upload widget.
+// Include inside the <body> of profile.php.
 ?>
 
-<!-- ══════════════════════════════════════════════════════════
-     RESUME UPLOAD BLOCK — Paste at top of profile.php body
-     (after success/error messages, before the profile form)
-     ══════════════════════════════════════════════════════════ -->
-
-<!-- ── Inline styles for the upload block ───────────────────── -->
 <style>
-  /* ── Main upload card container ───────────────────────────── */
   #resumeUploadBlock {
-    background: #f0f4ff;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%);
     border: 2px dashed #4a6cf7;
     border-radius: 14px;
     padding: 22px 26px;
@@ -22,7 +14,6 @@
     position: relative;
   }
 
-  /* ── Header row with icon + title ─────────────────────────── */
   #resumeUploadBlock .rub-header {
     display: flex;
     align-items: center;
@@ -55,7 +46,6 @@
     margin-top: 2px;
   }
 
-  /* ── Method badge ──────────────────────────────────────────── */
   .rub-method-badge {
     display: inline-flex;
     align-items: center;
@@ -66,12 +56,26 @@
     border-radius: 99px;
     margin-left: 8px;
     vertical-align: middle;
-    letter-spacing: .3px;
   }
-  .rub-method-badge.gemini  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-  .rub-method-badge.local   { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
 
-  /* ── Upload button ─────────────────────────────────────────── */
+  .rub-method-badge.gemini {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+  }
+
+  .rub-method-badge.local {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffcc80;
+  }
+
+  .rub-method-badge.ai {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+  }
+
   #rubUploadBtn {
     display: inline-flex;
     align-items: center;
@@ -88,10 +92,15 @@
     box-shadow: 0 4px 12px rgba(74, 108, 247, .35);
   }
 
-  #rubUploadBtn:hover  { opacity: .9; transform: translateY(-1px); }
-  #rubUploadBtn:active { transform: translateY(0); }
+  #rubUploadBtn:hover {
+    opacity: .9;
+    transform: translateY(-1px);
+  }
 
-  /* ── Selected filename tag ─────────────────────────────────── */
+  #rubUploadBtn:active {
+    transform: translateY(0);
+  }
+
   #rubFileName {
     display: inline-block;
     margin-left: 12px;
@@ -108,29 +117,45 @@
     white-space: nowrap;
   }
 
-  /* ── Status messages ───────────────────────────────────────── */
   #rubStatus {
     margin-top: 12px;
     font-size: 13px;
     min-height: 22px;
-    transition: opacity .3s;
   }
-  #rubStatus.loading { color: #1a237e; }
-  #rubStatus.success { color: #2e7d32; font-weight: 600; }
-  #rubStatus.error   { color: #c62828; font-weight: 600; }
 
-  /* ── Animated dots for loading ─────────────────────────────── */
+  #rubStatus.loading {
+    color: #1a237e;
+  }
+
+  #rubStatus.success {
+    color: #2e7d32;
+    font-weight: 600;
+  }
+
+  #rubStatus.error {
+    color: #c62828;
+    font-weight: 600;
+  }
+
   .rub-dots::after {
     content: '.';
     animation: rubDots 1.2s steps(3, end) infinite;
   }
+
   @keyframes rubDots {
-    0%  { content: '.'; }
-    33% { content: '..'; }
-    66% { content: '...'; }
+    0% {
+      content: '.';
+    }
+
+    33% {
+      content: '..';
+    }
+
+    66% {
+      content: '...';
+    }
   }
 
-  /* ── Saved resume preview section ──────────────────────────── */
   #rubSavedSection {
     margin-top: 16px;
     background: #fff;
@@ -173,8 +198,9 @@
     margin-top: 2px;
   }
 
-  /* Small action buttons */
-  .rub-btn-view, .rub-btn-dl, .rub-btn-del {
+  .rub-btn-view,
+  .rub-btn-dl,
+  .rub-btn-del {
     padding: 6px 14px;
     border: none;
     border-radius: 6px;
@@ -187,12 +213,28 @@
     align-items: center;
     gap: 4px;
   }
-  .rub-btn-view { background: #e8eaf6; color: #1a237e; }
-  .rub-btn-dl   { background: #e8f5e9; color: #2e7d32; }
-  .rub-btn-del  { background: #ffebee; color: #c62828; }
-  .rub-btn-view:hover, .rub-btn-dl:hover, .rub-btn-del:hover { opacity: .8; }
 
-  /* ── Resume Insights panel (for extended fields) ────────────── */
+  .rub-btn-view {
+    background: #e8eaf6;
+    color: #1a237e;
+  }
+
+  .rub-btn-dl {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  .rub-btn-del {
+    background: #ffebee;
+    color: #c62828;
+  }
+
+  .rub-btn-view:hover,
+  .rub-btn-dl:hover,
+  .rub-btn-del:hover {
+    opacity: .8;
+  }
+
   #rubInsightsPanel {
     margin-top: 14px;
     background: #fff;
@@ -225,7 +267,7 @@
   .rub-insight-label {
     font-weight: 700;
     color: #555;
-    min-width: 110px;
+    min-width: 130px;
     flex-shrink: 0;
   }
 
@@ -240,47 +282,46 @@
     font-style: italic;
   }
 
-  /* ── Field highlight on auto-fill ──────────────────────────── */
+  /* Yellow highlight on auto-filled fields */
   .rub-autofilled {
     background-color: #fff9c4 !important;
     border-color: #f9a825 !important;
     transition: background-color 3s ease, border-color 3s ease;
   }
 
-  /* ── Mobile adjustments ────────────────────────────────────── */
   @media (max-width: 600px) {
-    #resumeUploadBlock { padding: 16px; }
-    #rubFileName { display: block; margin: 8px 0 0; max-width: 100%; }
-    #rubSavedSection .rub-saved-row { flex-direction: column; align-items: flex-start; }
+    #resumeUploadBlock {
+      padding: 16px;
+    }
+
+    #rubFileName {
+      display: block;
+      margin: 8px 0 0;
+      max-width: 100%;
+    }
+
+    #rubSavedSection .rub-saved-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 </style>
 
-<!-- ════════════════════════════════════════════════════════════
-     HTML for the upload block
-     ════════════════════════════════════════════════════════════ -->
 <div id="resumeUploadBlock">
-
-  <!-- Header ────────────────────────────────────────────────── -->
   <div class="rub-header">
     <div class="rub-icon">📄</div>
     <div>
-      <div class="rub-title">Upload Resume to Auto-Fill</div>
-      <div class="rub-subtitle">PDF only · Max 2 MB · AI extracts your profile details · Falls back to local parser if AI unavailable</div>
+      <div class="rub-title">Upload Resume to Auto-Fill Profile</div>
+      <div class="rub-subtitle">PDF only · Max 2 MB · AI extracts your profile details automatically</div>
     </div>
   </div>
 
-  <!-- Upload button + selected filename ──────────────────────── -->
   <div>
-    <!-- Hidden file input — triggered by button click -->
     <input type="file" id="rubFileInput" accept="application/pdf" style="display:none;" aria-label="Choose PDF resume">
-
-    <button type="button" id="rubUploadBtn" onclick="rubTriggerPicker()">
-      📎 Choose PDF Resume
-    </button>
+    <button type="button" id="rubUploadBtn" onclick="rubTriggerPicker()">📎 Choose PDF Resume</button>
     <span id="rubFileName">No file chosen</span>
   </div>
 
-  <!-- Overwrite toggle ───────────────────────────────────────── -->
   <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
     <input type="checkbox" id="rubOverwrite" style="width:15px;height:15px;cursor:pointer;accent-color:#4a6cf7;">
     <label for="rubOverwrite" style="font-size:12px;color:#444;cursor:pointer;margin:0;">
@@ -288,18 +329,15 @@
     </label>
   </div>
 
-  <!-- Status / feedback message ──────────────────────────────── -->
   <div id="rubStatus"></div>
 
-  <!-- Resume Insights panel (read-only extended fields) ──────── -->
+  <!-- Resume Insights panel -->
   <div id="rubInsightsPanel">
-    <div class="rub-insights-title">
-      🔍 Resume Insights (from AI parser)
-    </div>
+    <div class="rub-insights-title">🔍 Resume Insights (from AI parser)</div>
     <div id="rubInsightsContent"></div>
   </div>
 
-  <!-- Saved resume preview (shown if resume already uploaded) ─── -->
+  <!-- Saved resume preview -->
   <div id="rubSavedSection">
     <div class="rub-saved-title">📂 Your Saved Resume</div>
     <div class="rub-saved-row">
@@ -308,62 +346,58 @@
         <div class="rub-file-date" id="rubSavedDate"></div>
       </div>
       <a id="rubViewBtn" class="rub-btn-view" target="_blank">👁 View</a>
-      <a id="rubDlBtn"   class="rub-btn-dl"   download>⬇ Download</a>
+      <a id="rubDlBtn" class="rub-btn-dl" download>⬇ Download</a>
       <button id="rubDelBtn" class="rub-btn-del" onclick="rubDeleteResume()">🗑 Delete</button>
     </div>
   </div>
+</div>
 
-</div><!-- /#resumeUploadBlock -->
-
-<!-- ════════════════════════════════════════════════════════════
-     JavaScript — plain JS, no libraries
-     ════════════════════════════════════════════════════════════ -->
 <script>
   // ── State ──────────────────────────────────────────────────────
-  var rubSavedPath = '';    // stores server path of uploaded resume
+  var rubSavedPath = '';
 
-  // ── FIELD MAP (Problem 3) ──────────────────────────────────────
-  // Maps smart_parse_resume.php JSON keys → profile.php form field names/IDs.
-  // Rules: only fill if field is currently EMPTY, highlight with yellow for 3s.
+  // ── FIELD MAP ──────────────────────────────────────────────────
+  // Maps smart_parse_resume.php JSON keys → form field name attributes.
+  // Keys that DON'T have an editable form input are omitted.
   var FIELD_MAP = {
-    name:               'name',               // <input name="name"> if present
-    email:              'email',              // <input name="email"> if present
-    phone:              'contact_number',     // <input name="contact_number">
-    linkedin:           'linkedin_url',       // <input name="linkedin_url"> if present
-    cgpa:               'cgpa',               // <input name="cgpa">
-    specialization:     'specialization',     // <select name="specialization">
-    tenth_percent:      'tenth_percentage',   // <input name="tenth_percentage">
-    twelfth_percent:    'twelfth_percentage', // <input name="twelfth_percentage">
-    graduation_percent: 'degree_cgpa',        // <input name="degree_cgpa">
-    skills:             'skills',             // <input/textarea name="skills"> if present
-    work_experience:    'work_experience',    // <textarea name="work_experience"> if present
-    certifications:     'certifications',     // <input name="certifications"> if present
-    languages:          'languages',          // <input name="languages"> if present
+    phone: 'contact_number',
+    cgpa: 'cgpa',
+    specialization: 'specialization',
+    tenth_percent: 'tenth_percentage',
+    twelfth_percent: 'twelfth_percentage',
+    graduation_percent: 'degree_cgpa',
+    city: 'city',
+    state: 'state',
+    country: 'country',
   };
 
-  // ── Extended fields shown in the Insights panel (not in main form) ──
+  // ── Insights panel labels (all fields for display) ─────────────
   var INSIGHTS_LABELS = {
-    name:               'Full Name',
-    email:              'Email',
-    phone:              'Phone',
-    linkedin:           'LinkedIn',
-    skills:             'Skills',
-    work_experience:    'Work Experience',
-    certifications:     'Certifications',
-    languages:          'Languages',
+    name: 'Full Name',
+    email: 'Email',
+    phone: 'Phone',
+    cgpa: 'MBA CGPA',
+    specialization: 'Specialization',
+    tenth_percent: '10th %',
+    twelfth_percent: '12th %',
+    graduation_percent: 'Degree CGPA',
+    skills: 'Skills (saved for ATS)',
+    work_experience: 'Work Experience',
+    certifications: 'Certifications',
+    city: 'City',
+    state: 'State',
+    country: 'Country',
   };
 
-  // ── Open file picker ───────────────────────────────────────────
   function rubTriggerPicker() {
     document.getElementById('rubFileInput').click();
   }
 
-  // ── File selected handler ──────────────────────────────────────
+  // ── File selected ──────────────────────────────────────────────
   document.getElementById('rubFileInput').addEventListener('change', function () {
     var file = this.files[0];
     if (!file) return;
 
-    // Client-side validation before upload
     if (file.type !== 'application/pdf') {
       rubSetStatus('error', '❌ Only PDF files are accepted.');
       this.value = '';
@@ -375,14 +409,11 @@
       return;
     }
 
-    // Show selected filename
     document.getElementById('rubFileName').textContent = file.name;
-
-    // Start the smart parse + upload flow
     rubSmartParseResume(file);
   });
 
-  // ── Main flow: smart parse (Gemini → local fallback) then save ──
+  // ── Main flow (Gemini + DB save) ─────────────────────────────
   function rubSmartParseResume(file) {
     rubSetStatus('loading', '🤖 AI is reading your resume<span class="rub-dots"></span>');
     document.getElementById('rubInsightsPanel').style.display = 'none';
@@ -390,82 +421,104 @@
     var formData = new FormData();
     formData.append('resume_file', file);
 
-    // Step 1 — send to smart_parse_resume.php (Gemini + local fallback)
-    fetch('smart_parse_resume.php', {
-      method: 'POST',
-      body:   formData,
-    })
-      .then(function (res) { return res.json(); })
+    fetch('smart_parse_resume.php', { method: 'POST', body: formData })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Server error (HTTP ' + res.status + ')');
+        return res.json();
+      })
       .then(function (result) {
-
         if (result.error) {
-          // Completely failed — still save the file
-          rubSetStatus('loading', '⚠️ AI parser unavailable (' + result.error + '). Saving file...');
-          rubSaveFile(file, 0, 'unknown', {});
+          rubSetStatus('error', '❌ ' + result.error);
           return;
         }
 
-        var method  = result.method || 'unknown'; // 'gemini' or 'local'
-        var data    = result.data   || {};
+        var method = result.method || 'unknown';
+        var data = result.data || {};
 
-        // Step 2 — auto-fill form fields (empty only, unless overwrite checked)
-        var filled = rubAutoFill(data);
-
-        // Step 3 — show insights panel for extended fields
+        // 1. Fill HTML form fields (visual highlight)
+        var formFilled = rubAutoFill(data);
+        // 2. Show insights panel
         rubShowInsights(data, method);
-
-        // Step 4 — save the PDF file to server
-        rubSaveFile(file, filled, method, data);
+        // 3. Save parsed data to DB, then save PDF file
+        rubSaveProfileToDB(data, file, formFilled, method);
       })
       .catch(function (err) {
-        // Network error reaching smart_parse_resume.php — still try to save
-        rubSetStatus('loading', '⚠️ AI unavailable — saving file without auto-fill...');
-        rubSaveFile(file, 0, 'error', {});
+        rubSetStatus('error', '❌ Network / server error: ' + err.message + '. Please check your connection and try again.');
       });
   }
 
-  // ── Auto-fill empty form fields (Problem 3) ────────────────────
+  // ── Save parsed data to DB via autofill_profile.php ──────────
+  function rubSaveProfileToDB(data, file, formFilled, method) {
+    rubSetStatus('loading', '💾 Saving profile data to database<span class="rub-dots"></span>');
+
+    var overwrite = !!(document.getElementById('rubOverwrite') &&
+      document.getElementById('rubOverwrite').checked);
+
+    fetch('autofill_profile.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: data, force_overwrite: overwrite ? 1 : 0 })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (dbResult) {
+        var dbSaved = (dbResult.saved && dbResult.saved.length) ? dbResult.saved.length : 0;
+        rubSaveFile(file, formFilled, dbSaved, method, dbResult);
+      })
+      .catch(function () {
+        // DB save failed — still save file and warn
+        rubSaveFile(file, formFilled, 0, method, null);
+      });
+  }
+
+  // ── Auto-fill form fields ──────────────────────────────────────
   function rubAutoFill(data) {
     var filledCount = 0;
-    var overwrite   = document.getElementById('rubOverwrite') &&
-                      document.getElementById('rubOverwrite').checked;
+    var overwrite = !!(document.getElementById('rubOverwrite') &&
+      document.getElementById('rubOverwrite').checked);
 
     Object.keys(FIELD_MAP).forEach(function (resumeKey) {
       var formName = FIELD_MAP[resumeKey];
-      var value    = (data[resumeKey] || '').trim();
-      if (!value) return; // parser couldn't find it — skip
+      // Coerce value to string and trim
+      var rawVal = data[resumeKey];
+      if (rawVal === undefined || rawVal === null) return;
+      var value = String(rawVal).trim();
+      if (value === '') return;  // parser found nothing
 
-      // Find the form element by name attribute
       var el = document.querySelector('[name="' + formName + '"]');
-      if (!el) return; // field doesn't exist in this form — skip silently
+      if (!el) return;  // field not in this form
 
-      // Only fill empty fields — unless overwrite checkbox is checked
-      var currentVal = el.value.trim();
-      var isEmpty    = currentVal === '' || currentVal === '0' || currentVal === '0.00';
-      if (!isEmpty && !overwrite) return; // respect existing data
+      // Determine if the current field value is "empty/default"
+      var currentVal = String(el.value).trim();
+      var isEmpty = (currentVal === ''
+        || currentVal === '0'
+        || currentVal === '0.00'
+        || currentVal === '0.0'
+        || parseFloat(currentVal) === 0);
 
-      // For <select> elements: match option value case-insensitively
+      if (!isEmpty && !overwrite) return;  // don't overwrite existing real data
+
+      // Handle <select> elements — match option value case-insensitively
       if (el.tagName === 'SELECT') {
         var matched = false;
         Array.from(el.options).forEach(function (opt) {
           if (opt.value.toLowerCase() === value.toLowerCase()) {
-            el.value  = opt.value;
-            matched   = true;
+            el.value = opt.value;
+            matched = true;
           }
         });
-        if (!matched) return; // no matching option — don't set
+        if (!matched) return;
       } else {
         el.value = value;
       }
 
-      // ── Highlight newly filled field with yellow for 3 seconds ─
+      // Yellow highlight for 3 seconds
       el.classList.add('rub-autofilled');
       el.style.backgroundColor = '#fff9c4';
-      el.style.borderColor     = '#f9a825';
+      el.style.borderColor = '#f9a825';
       setTimeout(function () {
         el.classList.remove('rub-autofilled');
         el.style.backgroundColor = '';
-        el.style.borderColor     = '';
+        el.style.borderColor = '';
       }, 3000);
 
       filledCount++;
@@ -474,43 +527,49 @@
     return filledCount;
   }
 
-  // ── Show Resume Insights panel ─────────────────────────────────
+  // ── Insights panel ─────────────────────────────────────────────
   function rubShowInsights(data, method) {
-    var panel   = document.getElementById('rubInsightsPanel');
+    var panel = document.getElementById('rubInsightsPanel');
     var content = document.getElementById('rubInsightsContent');
 
-    // Only show if we got some useful data
-    var hasData = Object.values(data).some(function(v) { return v && v.trim(); });
+    // Check if any value is non-empty (coerce to string safely)
+    var hasData = Object.values(data).some(function (v) {
+      return v !== null && v !== undefined && String(v).trim() !== '';
+    });
     if (!hasData) return;
 
     var html = '';
-
     Object.keys(INSIGHTS_LABELS).forEach(function (key) {
-      var val   = (data[key] || '').trim();
+      var val = (data[key] !== undefined && data[key] !== null) ? String(data[key]).trim() : '';
       var label = INSIGHTS_LABELS[key];
       html += '<div class="rub-insight-row">'
-            + '<span class="rub-insight-label">' + label + ':</span>'
-            + '<span class="rub-insight-value'
-            + (val ? '' : ' rub-insight-empty') + '">'
-            + (val ? val : 'Not found')
-            + '</span></div>';
+        + '<span class="rub-insight-label">' + label + ':</span>'
+        + '<span class="rub-insight-value' + (val ? '' : ' rub-insight-empty') + '">'
+        + (val ? rubEscHtml(val) : 'Not found')
+        + '</span></div>';
     });
 
     content.innerHTML = html;
     panel.style.display = 'block';
   }
 
+  // ── Escape HTML for safe display in insights panel ─────────────
+  function rubEscHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   // ── Save PDF to server ─────────────────────────────────────────
-  function rubSaveFile(file, filledCount, method, data) {
+  function rubSaveFile(file, formFilled, dbSaved, method, dbResult) {
     rubSetStatus('loading', '💾 Saving resume file<span class="rub-dots"></span>');
 
     var formData = new FormData();
     formData.append('resume_file', file);
 
-    fetch('save_resume_file.php', {
-      method: 'POST',
-      body:   formData,
-    })
+    fetch('save_resume_file.php', { method: 'POST', body: formData })
       .then(function (res) { return res.json(); })
       .then(function (result) {
         if (result.error) {
@@ -519,29 +578,38 @@
         }
 
         rubSavedPath = result.path;
-
-        // Show saved resume preview
         rubShowSavedResume({
-          found:         true,
-          path:          result.path,
+          found: true,
+          path: result.path,
           original_name: result.original_name,
-          uploaded_at:   result.uploaded_at,
+          uploaded_at: result.uploaded_at,
         });
 
-        // ── Success message with fill count + method badge ─────
-        var methodBadge = '';
-        if (method === 'gemini') {
-          methodBadge = ' <span class="rub-method-badge gemini">✨ Gemini AI</span>';
-        } else if (method === 'local') {
-          methodBadge = ' <span class="rub-method-badge local">🔧 Local Parser</span>';
-        }
+        var methodBadge = method === 'gemini'
+          ? ' <span class="rub-method-badge ai">✨ AI Parsed</span>'
+          : ' <span class="rub-method-badge local">🔧 Local Parser</span>';
 
-        var msg = filledCount > 0
-          ? '✅ Resume uploaded!' + methodBadge
-            + ' <strong>' + filledCount + ' field' + (filledCount > 1 ? 's' : '') + '</strong>'
-            + ' auto-filled. Review and save.'
-          : '✅ Resume saved.' + methodBadge
-            + ' No new fields were auto-filled. Please fill in your profile details manually.';
+        var msg;
+        if (dbSaved > 0) {
+          // Fields saved directly to DB — no manual Save needed
+          var savedList = (dbResult && dbResult.saved) ? dbResult.saved.join(', ') : '';
+          msg = '✅ Profile updated!' + methodBadge
+            + ' <strong>' + dbSaved + ' field' + (dbSaved > 1 ? 's' : '') + '</strong>'
+            + ' saved to database automatically'
+            + (savedList ? ' (' + savedList + ')' : '') + '.';
+        } else if (formFilled > 0) {
+          msg = '✅ Resume parsed!' + methodBadge
+            + ' <strong>' + formFilled + ' field' + (formFilled > 1 ? 's' : '') + '</strong>'
+            + ' filled in the form below. Click <strong>Save Changes</strong> to apply.';
+          // Scroll down to edit form
+          var editCard = document.getElementById('editCard');
+          if (editCard) setTimeout(function () { editCard.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
+        } else {
+          var skipMsg = (dbResult && dbResult.skipped && dbResult.skipped.length)
+            ? ' (' + dbResult.skipped.length + ' field(s) already filled — tick ♻️ to overwrite)'
+            : ' No data extracted from resume.';
+          msg = '✅ Resume saved.' + methodBadge + skipMsg;
+        }
 
         rubSetStatus('success', msg);
       })
@@ -550,7 +618,7 @@
       });
   }
 
-  // ── Show saved resume preview section ─────────────────────────
+  // ── Show saved resume preview ──────────────────────────────────
   function rubShowSavedResume(info) {
     if (!info || !info.found) {
       document.getElementById('rubSavedSection').style.display = 'none';
@@ -563,7 +631,7 @@
     document.getElementById('rubSavedName').textContent = info.original_name || 'resume.pdf';
     document.getElementById('rubSavedDate').textContent = 'Uploaded: ' + (info.uploaded_at || '');
     document.getElementById('rubViewBtn').href = fileUrl;
-    document.getElementById('rubDlBtn').href   = fileUrl;
+    document.getElementById('rubDlBtn').href = fileUrl;
     document.getElementById('rubDlBtn').setAttribute('download', info.original_name || 'resume.pdf');
     rubSavedPath = info.path;
 
@@ -597,20 +665,16 @@
 
   // ── Status helper ──────────────────────────────────────────────
   function rubSetStatus(type, html) {
-    var el      = document.getElementById('rubStatus');
+    var el = document.getElementById('rubStatus');
     el.className = type;
     el.innerHTML = html;
   }
 
-  // ── On page load: fetch and display existing resume ────────────
+  // ── On page load: fetch existing resume ───────────────────────
   (function () {
     fetch('get_student_resume.php')
       .then(function (res) { return res.json(); })
-      .then(function (info) {
-        rubShowSavedResume(info);
-      })
-      .catch(function () {
-        // Silently ignore — non-critical
-      });
+      .then(function (info) { rubShowSavedResume(info); })
+      .catch(function () { /* non-critical */ });
   })();
 </script>

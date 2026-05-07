@@ -2,49 +2,36 @@
 // =============================================================
 //  student/smart_parse_resume.php
 //  SMART RESUME PARSER — Gemini first, local fallback second.
-//
-//  FLOW:
-//   1. Student uploads PDF resume
-//   2. Try Gemini API (gemini-2.0-flash) with strict JSON prompt
-//   3. If Gemini succeeds → return parsed JSON fields
-//   4. If Gemini fails (any reason) → fall back to smalot/pdfparser
-//      + regex to extract fields from PDF text
-//   5. Return JSON: { success, method, data, [debug info] }
-//
-//  Called by: JS fetch() in resume_upload_block.php
-//  Debug mode: Add ?debug=1 to URL for full diagnostic output.
+//  Fixed: htmlspecialchars corruption, JSON mode, model upgrade.
 // =============================================================
 
-// ── Auth guard ───────────────────────────────────────────────
 require_once '../config/auth.php';
+require_once '../config/db.php';   // needed to save skills for ATS
 if ($role_id != 1) {
     http_response_code(403);
     echo json_encode(['error' => 'Unauthorized']);
     exit();
 }
 
-// ── JSON response header ──────────────────────────────────────
 header('Content-Type: application/json');
 
-// ── Debug mode flag ───────────────────────────────────────────
 $debugMode = isset($_GET['debug']) && $_GET['debug'] === '1';
 $debugLog = [];
 
-// ── Gemini configuration ──────────────────────────────────────
-$geminiApiKey = 'AIzaSyBY7d18U0h7xjxstr8iDvETa8picvF-rrU';
-$geminiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/'
-    . 'models/gemini-2.0-flash:generateContent?key=' . $geminiApiKey;
+// ── Groq config (free tier — sign up at console.groq.com) ────
+$groqApiKey = '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';  // ← paste your key
+$groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
+$groqModel = 'llama-3.3-70b-versatile'; // free, fast, accurate
 
-// ── Validate file upload ──────────────────────────────────────
+// ── Validate upload ───────────────────────────────────────────
 if (!isset($_FILES['resume_file']) || $_FILES['resume_file']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'No file uploaded or upload error occurred.']);
     exit();
 }
 
 $file = $_FILES['resume_file'];
-$maxBytes = 2 * 1024 * 1024; // 2 MB
+$maxBytes = 2 * 1024 * 1024;
 
-// Check MIME type — PDF only
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
 $mimeType = finfo_file($finfo, $file['tmp_name']);
 finfo_close($finfo);
@@ -53,13 +40,11 @@ if ($mimeType !== 'application/pdf') {
     echo json_encode(['error' => 'Only PDF files are accepted.']);
     exit();
 }
-
 if ($file['size'] > $maxBytes) {
     echo json_encode(['error' => 'File exceeds 2 MB limit.']);
     exit();
 }
 
-// ── Read PDF bytes ────────────────────────────────────────────
 $pdfContent = file_get_contents($file['tmp_name']);
 if ($pdfContent === false) {
     echo json_encode(['error' => 'Could not read uploaded file.']);
@@ -67,199 +52,186 @@ if ($pdfContent === false) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STEP 1 — Try Gemini API
+//  STEP 1 — Extract PDF text locally (saves Gemini token quota)
 // ═══════════════════════════════════════════════════════════════
+$pdfTextForGemini = '';
 
+// Try smalot first (most accurate)
+$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($autoloadPath)) {
+    require_once $autoloadPath;
+    try {
+        $parser = new \Smalot\PdfParser\Parser();
+        $pdf = $parser->parseContent($pdfContent);
+        $pdfTextForGemini = $pdf->getText();
+        $debugLog[] = 'smalot: extracted ' . strlen($pdfTextForGemini) . ' chars';
+    } catch (\Exception $e) {
+        $debugLog[] = 'smalot error: ' . $e->getMessage();
+    }
+}
+
+// Fallback: basic stream extraction
+if (empty(trim($pdfTextForGemini))) {
+    $pdfTextForGemini = extractTextFromPdfBasic($pdfContent);
+    $debugLog[] = 'basic extraction: ' . strlen($pdfTextForGemini) . ' chars';
+}
+
+// Trim to 4000 chars max — more than enough for any resume, keeps token count low
+$pdfTextForGemini = trim(substr($pdfTextForGemini, 0, 4000));
+
+// ═══════════════════════════════════════════════════════════════
+//  STEP 2 — Gemini API (text-only, NOT PDF binary)
+// ═══════════════════════════════════════════════════════════════
 $geminiRawResponse = '';
 $geminiCleaned = '';
 $geminiError = '';
 $parsedData = null;
 $method = 'gemini';
 
-$pdfBase64 = base64_encode($pdfContent);
+$prompt = <<<'PROMPT'
+Extract resume data and return ONLY a valid JSON object with these exact keys. No markdown, no explanation.
 
-// ── Exact Gemini prompt as specified ─────────────────────────
-$prompt = 'You are a resume parser.
-Extract information from the provided resume PDF.
-Return a JSON object with EXACTLY these keys:
-{
-  name: full name,
-  email: email address,
-  phone: phone number with country code if present,
-  linkedin: linkedin URL if found else empty string,
-  cgpa: CGPA numbers only like 7.5,
-  specialization: MBA specialization like Finance HR Marketing Operations,
-  tenth_percent: 10th percentage numbers only like 85.5,
-  twelfth_percent: 12th percentage numbers only,
-  graduation_percent: graduation percentage numbers only,
-  skills: comma separated skills list,
-  work_experience: brief work experience summary in 2-3 sentences,
-  certifications: comma separated certifications,
-  languages: comma separated languages known
-}
-STRICT RULES:
-- Return ONLY the JSON object
-- No markdown formatting
-- No backticks before or after
-- No explanation text
-- No text before or after JSON
-- If information not found use empty string
-- Numeric fields return numbers only';
+{"name":"","email":"","phone":"","cgpa":"","specialization":"","tenth_percent":"","twelfth_percent":"","graduation_percent":"","skills":"","work_experience":"","certifications":"","languages":""}
 
-// ── Build Gemini request ──────────────────────────────────────
+RULES:
+- name: Full name from top of resume, Title Case.
+- email: First valid email.
+- phone: Indian mobile, exactly 10 digits, strip +91/0. Start with 6-9. Empty if none.
+- cgpa: MBA/PG CGPA on 0-10 scale as decimal string (e.g. "8.75"). Not percentage. Empty if none.
+- specialization: ONE of: Finance|Marketing|HR|Operations|IT|General. Map by keywords.
+- tenth_percent: Class X/SSC percentage as decimal string. Convert CGPA×9.5 if needed.
+- twelfth_percent: Class XII/HSC percentage as decimal string.
+- graduation_percent: Bachelor's CGPA×10 or percentage as decimal string.
+- skills: Comma-separated, max 30, deduplicated.
+- work_experience: 2-3 sentence summary of all jobs/internships with role, company, duration.
+- certifications: Comma-separated courses/certs or empty.
+- languages: Comma-separated languages or empty.
+
+All values must be strings. Missing fields use "". JSON must be valid.
+
+RESUME TEXT:
+PROMPT;
+
+$fullPrompt = $prompt . "\n" . $pdfTextForGemini;
+
 $requestBody = json_encode([
-    'contents' => [
-        [
-            'parts' => [
-                [
-                    'inline_data' => [
-                        'mime_type' => 'application/pdf',
-                        'data' => $pdfBase64,
-                    ],
-                ],
-                [
-                    'text' => $prompt,
-                ],
-            ],
-        ],
+    'model' => $groqModel,
+    'messages' => [
+        ['role' => 'system', 'content' => 'You are a resume data extraction engine. Always respond with a single valid JSON object only. No markdown, no explanation.'],
+        ['role' => 'user', 'content' => $fullPrompt],
     ],
-    'generationConfig' => [
-        'temperature' => 0.1,
-        'maxOutputTokens' => 1024,
-    ],
+    'temperature' => 0.0,
+    'max_tokens' => 1024,
+    'response_format' => ['type' => 'json_object'],
 ]);
 
-// ── Call Gemini via cURL ──────────────────────────────────────
-$ch = curl_init($geminiEndpoint);
+// ── Call Groq API ─────────────────────────────────────────────
+$ch = curl_init($groqEndpoint);
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $requestBody,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
-        'Content-Length: ' . strlen($requestBody),
+        'Authorization: Bearer ' . $groqApiKey,
     ],
     CURLOPT_TIMEOUT => 30,
     CURLOPT_SSL_VERIFYPEER => false,
 ]);
-
 $response = curl_exec($ch);
 $curlError = curl_error($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-$debugLog[] = "Gemini HTTP code: $httpCode";
-$debugLog[] = "Gemini cURL error: " . ($curlError ?: 'none');
+$debugLog[] = "Groq HTTP: $httpCode" . ($curlError ? ", cURL: $curlError" : '');
 
 if ($response !== false && !$curlError && $httpCode === 200) {
     $geminiRawResponse = $response;
-    $geminiJson = json_decode($response, true);
+    $gJson = json_decode($response, true);
 
-    if (isset($geminiJson['candidates'][0]['content']['parts'][0]['text'])) {
-        $rawText = $geminiJson['candidates'][0]['content']['parts'][0]['text'];
-        $rawText = trim($rawText);
-        $debugLog[] = "Gemini raw text (first 200): " . substr($rawText, 0, 200);
+    // Groq uses OpenAI-compatible format: choices[0].message.content
+    $rawText = trim($gJson['choices'][0]['message']['content'] ?? '');
+    $debugLog[] = 'Groq raw (first 300): ' . substr($rawText, 0, 300);
 
-        // ── JSON Cleaning (Problem 2) ─────────────────────────
-        // Remove ```json and ``` markdown blocks
-        $cleaned = preg_replace('/^```(?:json)?\s*/im', '', $rawText);
-        $cleaned = preg_replace('/\s*```\s*$/im', '', $cleaned);
+    // Strip markdown fences if Groq wraps in ```json
+    $cleaned = preg_replace('/^```(?:json)?\s*/im', '', $rawText);
+    $cleaned = preg_replace('/\s*```\s*$/im', '', $cleaned);
+    $cleaned = trim($cleaned);
 
-        // Remove any text before the first {
-        $firstBrace = strpos($cleaned, '{');
-        if ($firstBrace !== false) {
-            $cleaned = substr($cleaned, $firstBrace);
-        }
+    // Extract JSON object boundaries
+    $fb = strpos($cleaned, '{');
+    $lb = strrpos($cleaned, '}');
+    if ($fb !== false && $lb !== false && $lb > $fb) {
+        $cleaned = substr($cleaned, $fb, $lb - $fb + 1);
+    }
+    // Remove trailing commas
+    $cleaned = preg_replace('/,\s*([\}\]])/m', '$1', $cleaned);
+    $geminiCleaned = $cleaned;
 
-        // Remove any text after the last }
-        $lastBrace = strrpos($cleaned, '}');
-        if ($lastBrace !== false) {
-            $cleaned = substr($cleaned, 0, $lastBrace + 1);
-        }
-
-        // Fix single quotes to double quotes (simple heuristic)
-        // Only convert 'key': pattern common in Gemini responses
-        $cleaned = preg_replace("/([{,]\s*)'([^']+)'\s*:/", '$1"$2":', $cleaned);
-
-        // Remove trailing commas before } or ]
-        $cleaned = preg_replace('/,\s*([\}\]])/m', '$1', $cleaned);
-
-        // Trim whitespace
-        $cleaned = trim($cleaned);
-        $geminiCleaned = $cleaned;
-        $debugLog[] = "Gemini cleaned (first 200): " . substr($cleaned, 0, 200);
-
-        // ── Parse cleaned JSON ────────────────────────────────
-        $extracted = json_decode($cleaned, true);
-        if (is_array($extracted)) {
-            $parsedData = sanitizeGeminiData($extracted);
-            $method = 'gemini';
-            $debugLog[] = "Gemini parsing: SUCCESS";
-        } else {
-            $geminiError = 'Gemini returned non-parseable JSON after cleaning. json_last_error: ' . json_last_error_msg();
-            $debugLog[] = $geminiError;
-        }
+    $extracted = json_decode($cleaned, true);
+    if (is_array($extracted)) {
+        $parsedData = sanitizeData($extracted);
+        $method = 'gemini'; // keep method name for badge compatibility
+        $debugLog[] = 'Groq SUCCESS — ' . implode(', ', array_keys(array_filter($parsedData)));
     } else {
-        $geminiError = 'Gemini response missing expected candidates structure.';
-        $debugLog[] = $geminiError;
-        if ($debugMode) {
-            $debugLog[] = 'Raw Gemini body: ' . substr($response, 0, 500);
-        }
+        $geminiError = 'JSON parse failed: ' . json_last_error_msg();
+        $debugLog[] = $geminiError . ' | cleaned: ' . $cleaned;
     }
 } else {
-    $geminiError = "Gemini API call failed. HTTP: $httpCode, cURL: $curlError";
+    if ($httpCode === 429) {
+        $geminiError = 'Groq quota exceeded. Please wait a moment and try again.';
+    } elseif ($httpCode === 401) {
+        $geminiError = 'Groq API key invalid or missing. Check your key in smart_parse_resume.php.';
+    } elseif ($httpCode === 0 && $curlError) {
+        $geminiError = 'Network error: ' . $curlError;
+    } else {
+        $geminiError = 'Groq API failed. HTTP:' . $httpCode . ($curlError ? ' cURL:' . $curlError : '');
+    }
     $debugLog[] = $geminiError;
+    if ($debugMode && $response)
+        $debugLog[] = 'Error body: ' . substr($response, 0, 400);
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STEP 2 — Local Fallback if Gemini failed
+//  STEP 3 — Local fallback (reuses text already extracted above)
 // ═══════════════════════════════════════════════════════════════
-
-$pdfTextExtracted = '';
-
 if ($parsedData === null) {
     $method = 'local';
-    $debugLog[] = "Falling back to local parser (smalot/pdfparser + regex)";
+    $debugLog[] = 'Gemini unavailable (' . $geminiError . '). Using local regex parser.';
 
-    // ── Try smalot/pdfparser ──────────────────────────────────
-    $autoloadPath = __DIR__ . '/../vendor/autoload.php';
-    if (file_exists($autoloadPath)) {
-        require_once $autoloadPath;
+    // Reuse text extracted in STEP 1 (no need to parse PDF again)
+    $textForLocal = $pdfTextForGemini;
 
-        try {
-            $parser = new \Smalot\PdfParser\Parser();
-            $pdf = $parser->parseContent($pdfContent);
-            $pdfTextExtracted = $pdf->getText();
-            $debugLog[] = "smalot/pdfparser: extracted " . strlen($pdfTextExtracted) . " chars";
-        } catch (\Exception $e) {
-            $debugLog[] = "smalot/pdfparser error: " . $e->getMessage();
-            // Fall through — pdfTextExtracted stays empty
-        }
+    if (!empty(trim($textForLocal))) {
+        $parsedData = localParseResume($textForLocal, $debugLog);
+        $debugLog[] = 'Local parse done. Fields: ' . count(array_filter($parsedData));
     } else {
-        $debugLog[] = "smalot/pdfparser not installed (vendor/autoload.php not found)";
-    }
-
-    // ── If smalot didn't work, try basic text extraction ──────
-    if (empty(trim($pdfTextExtracted))) {
-        $debugLog[] = "Trying basic PDF text extraction fallback";
-        $pdfTextExtracted = extractTextFromPdfBasic($pdfContent);
-        $debugLog[] = "Basic extraction: " . strlen($pdfTextExtracted) . " chars";
-    }
-
-    // ── Now run regex local parser ────────────────────────────
-    if (!empty(trim($pdfTextExtracted))) {
-        $parsedData = localParseResume($pdfTextExtracted, $debugLog);
-        $debugLog[] = "Local parse complete. Fields found: " . count(array_filter($parsedData));
-    } else {
-        $debugLog[] = "No text extracted from PDF — cannot parse locally";
+        $debugLog[] = 'No text extracted — returning empty';
         $parsedData = getEmptyData();
     }
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STEP 3 — Return response
+//  STEP 3 — Save skills to DB for ATS scoring (silent, non-blocking)
 // ═══════════════════════════════════════════════════════════════
+$skillsToSave = trim($parsedData['skills'] ?? '');
+if ($skillsToSave && isset($conn)) {
+    // Auto-create column if not yet present
+    @mysqli_query($conn, "ALTER TABLE student ADD COLUMN IF NOT EXISTS resume_skills TEXT DEFAULT NULL AFTER city");
+    $sid = (int) $_SESSION['student_id'];
+    $stmt = mysqli_prepare($conn, "UPDATE student SET resume_skills=? WHERE student_id=?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, 'si', $skillsToSave, $sid);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        $debugLog[] = "Skills saved to DB: $skillsToSave";
+    }
+}
 
+// ═══════════════════════════════════════════════════════════════
+//  STEP 4 — Return JSON
+// ═══════════════════════════════════════════════════════════════
+$flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 if ($debugMode) {
     echo json_encode([
         'success' => true,
@@ -267,36 +239,27 @@ if ($debugMode) {
         'data' => $parsedData,
         'gemini_raw_response' => substr($geminiRawResponse, 0, 2000),
         'gemini_cleaned' => $geminiCleaned,
-        'pdf_text_extracted' => substr($pdfTextExtracted, 0, 500),
         'errors' => $debugLog,
-    ], JSON_PRETTY_PRINT);
+    ], JSON_PRETTY_PRINT | $flags);
 } else {
-    echo json_encode([
-        'success' => true,
-        'method' => $method,
-        'data' => $parsedData,
-    ]);
+    echo json_encode(['success' => true, 'method' => $method, 'data' => $parsedData], $flags);
 }
 exit();
 
 // ═══════════════════════════════════════════════════════════════
-//  HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-
 /**
- * Sanitizes and normalizes Gemini-extracted data.
- * Ensures all expected keys are present and values are clean.
+ * Sanitize Gemini data.
+ * IMPORTANT: Do NOT use htmlspecialchars — these values go into JS form
+ * fields via JSON, not into HTML. HTML-encoding breaks the values.
  */
-function sanitizeGeminiData(array $raw): array
+function sanitizeData(array $raw): array
 {
     $result = [];
 
-    // String fields
     $stringFields = [
         'name',
         'email',
         'phone',
-        'linkedin',
         'specialization',
         'skills',
         'work_experience',
@@ -304,23 +267,22 @@ function sanitizeGeminiData(array $raw): array
         'languages'
     ];
     foreach ($stringFields as $f) {
-        $val = isset($raw[$f]) ? trim((string) $raw[$f]) : '';
-        // Normalize: remove surrounding quotes if Gemini added them
-        $val = trim($val, '"\'');
-        $result[$f] = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+        $val = isset($raw[$f]) ? (string) $raw[$f] : '';
+        $val = trim($val, " \t\n\r\0\x0B\"'");
+        $result[$f] = $val;
     }
 
-    // Numeric fields — extract digits + decimal only
     $numFields = ['cgpa', 'tenth_percent', 'twelfth_percent', 'graduation_percent'];
     foreach ($numFields as $f) {
-        $raw_val = isset($raw[$f]) ? trim((string) $raw[$f]) : '';
-        // Extract first float-like number from the value
+        $raw_val = trim((string) ($raw[$f] ?? ''));
         if (preg_match('/(\d+\.?\d*)/', $raw_val, $m)) {
             $num = (float) $m[1];
-            // Sanity range check
             if ($f === 'cgpa' && ($num < 0 || $num > 10))
                 $num = 0;
-            if (in_array($f, ['tenth_percent', 'twelfth_percent', 'graduation_percent']) && ($num < 0 || $num > 100))
+            if (
+                in_array($f, ['tenth_percent', 'twelfth_percent', 'graduation_percent'])
+                && ($num < 0 || $num > 100)
+            )
                 $num = 0;
             $result[$f] = $num > 0 ? (string) $num : '';
         } else {
@@ -328,18 +290,12 @@ function sanitizeGeminiData(array $raw): array
         }
     }
 
-    // Normalize specialization to match our MBA options
     $result['specialization'] = normalizeSpecialization($result['specialization']);
-
-    // Normalize phone — extract 10-digit Indian number
     $result['phone'] = normalizePhone($result['phone']);
 
     return $result;
 }
 
-/**
- * Local regex-based resume parser using extracted PDF text.
- */
 function localParseResume(string $text, array &$log): array
 {
     $data = getEmptyData();
@@ -348,170 +304,405 @@ function localParseResume(string $text, array &$log): array
         fn($l) => strlen($l) > 0
     ));
 
-    // ── Name — first non-empty line that looks like a name ───
-    foreach ($lines as $line) {
-        $line = trim($line);
-        // Letters and spaces only, 3–50 chars, no @ or 10+ digit runs
-        if (
-            strlen($line) >= 3 &&
-            strlen($line) <= 50 &&
-            preg_match('/^[A-Za-z\s\.]+$/', $line) &&
-            strpos($line, '@') === false &&
-            !preg_match('/\d{10,}/', $line)
-        ) {
-            $data['name'] = htmlspecialchars($line, ENT_QUOTES, 'UTF-8');
-            $log[] = "Name found: {$line}";
-            break;
-        }
-    }
-
-    // ── Email ─────────────────────────────────────────────────
-    if (preg_match('/[\w.\-]+@[\w.\-]+\.\w+/', $text, $m)) {
-        $data['email'] = htmlspecialchars($m[0], ENT_QUOTES, 'UTF-8');
-        $log[] = "Email found: {$m[0]}";
-    }
-
-    // ── Phone ─────────────────────────────────────────────────
-    if (preg_match('/(\+91[\s\-]?)?[6-9]\d{9}/', $text, $m)) {
-        $data['phone'] = normalizePhone($m[0]);
-        $log[] = "Phone found: {$m[0]}";
-    }
-
-    // ── LinkedIn ──────────────────────────────────────────────
-    if (preg_match('/linkedin\.com\/in\/[\w\-]+/i', $text, $m)) {
-        $data['linkedin'] = 'https://www.' . $m[0];
-        $log[] = "LinkedIn found: {$m[0]}";
-    }
-
-    // ── CGPA ──────────────────────────────────────────────────
-    if (preg_match('/cgpa[\s:]+([0-9]\.[0-9]{1,2})/i', $text, $m)) {
-        $data['cgpa'] = $m[1];
-        $log[] = "CGPA found: {$m[1]}";
-    } elseif (preg_match('/([0-9]\.[0-9]{1,2})\s*\/\s*10/i', $text, $m)) {
-        $data['cgpa'] = $m[1];
-        $log[] = "CGPA (x/10 format) found: {$m[1]}";
-    }
-
-    // ── 10th Percentage ───────────────────────────────────────
-    if (preg_match('/10th[^\d]*(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['tenth_percent'] = $m[1];
-        $log[] = "10th %: {$m[1]}";
-    } elseif (preg_match('/(?:ssc|tenth|10th|x(?:th)?)[^\d]{0,20}(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['tenth_percent'] = $m[1];
-        $log[] = "10th % (alt): {$m[1]}";
-    }
-
-    // ── 12th Percentage ───────────────────────────────────────
-    if (preg_match('/12th[^\d]*(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['twelfth_percent'] = $m[1];
-        $log[] = "12th %: {$m[1]}";
-    } elseif (preg_match('/(?:hsc|twelfth|12th|xii(?:th)?|intermediate)[^\d]{0,20}(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['twelfth_percent'] = $m[1];
-        $log[] = "12th % (alt): {$m[1]}";
-    }
-
-    // ── Graduation Percentage ─────────────────────────────────
-    if (preg_match('/(b\.?com|bba|bsc|b\.?tech|b\.?e|graduation|undergraduate)[^\d]{0,30}(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['graduation_percent'] = $m[2];
-        $log[] = "Graduation %: {$m[2]}";
-    } elseif (preg_match('/(?:degree|ug)[^\d]{0,20}(\d{2,3}\.?\d*)\s*%/i', $text, $m)) {
-        $data['graduation_percent'] = $m[1];
-        $log[] = "Graduation % (alt): {$m[1]}";
-    }
-
-    // ── Specialization ────────────────────────────────────────
-    $specKeywords = [
-        'Finance' => 'Finance',
-        'Marketing' => 'Marketing',
-        'Human Resource' => 'HR',
-        'HR' => 'HR',
-        'Operations' => 'Operations',
-        'Business Analytics' => 'General',
-        'IT' => 'IT',
-        'Information Technology' => 'IT',
-        'International Business' => 'General',
-        'Supply Chain' => 'Operations',
-        'General Management' => 'General',
+    // ── Name ───────────────────────────────────────────────────────
+    // Names always appear in the first ~15 lines. Scan only there to avoid
+    // picking up phrases like "MBA Finance" or "Skills Summary" deeper in text.
+    $nameBlacklist = [
+        'resume',
+        'cv',
+        'curriculum',
+        'vitae',
+        'profile',
+        'summary',
+        'objective',
+        'career',
+        'education',
+        'experience',
+        'skills',
+        'certifications',
+        'languages',
+        'contact',
+        'references',
+        'declaration',
+        'projects',
+        'achievements',
+        'interests',
+        'personal',
+        'details',
+        'information',
+        'address',
+        'mobile',
+        'phone',
+        'email',
+        'professional',
+        'about',
+        'introduction',
+        'bachelor',
+        'master',
+        'mba',
+        'pgdm',
+        'bcom',
+        'bsc',
+        'btech',
+        'bca',
+        'bba',
+        'engineering',
+        'commerce',
+        'science',
+        'arts',
+        'management',
+        'university',
+        'college',
+        'institute',
+        'school',
+        'finance',
+        'marketing',
+        'operations',
+        'human resource',
+        'technology',
+        'first class',
+        'distinction',
+        'division',
+        'pass',
+        'grade',
+        'gpa',
+        'cgpa',
+        'india',
+        'karnataka',
+        'maharashtra',
+        'gujarat',
+        'delhi',
+        'mumbai',
+        'bangalore',
     ];
-    foreach ($specKeywords as $keyword => $mapped) {
-        if (stripos($text, $keyword) !== false) {
-            $data['specialization'] = $mapped;
-            $log[] = "Specialization found via keyword '$keyword': $mapped";
+    $firstLines = array_slice($lines, 0, 15);
+    foreach ($firstLines as $line) {
+        $line = trim($line);
+        if (strlen($line) < 3 || strlen($line) > 50)
+            continue;
+        // Only letters, spaces, dots, hyphens
+        if (!preg_match('/^[A-Za-z][A-Za-z\s\.\-]+$/', $line))
+            continue;
+        $wordCount = str_word_count($line);
+        // Names are 2-4 words
+        if ($wordCount < 2 || $wordCount > 4)
+            continue;
+        // Reject sentences (ends with period)
+        if (substr($line, -1) === '.')
+            continue;
+        // Each word must start uppercase (Title Case) OR line is ALL CAPS
+        $isAllCaps = (strtoupper($line) === $line);
+        $isTitleCase = preg_match('/^([A-Z][a-z]*\.?\s*)+$/', $line);
+        if (!$isAllCaps && !$isTitleCase)
+            continue;
+        // Check blacklist
+        $ll = strtolower($line);
+        $bad = false;
+        foreach ($nameBlacklist as $bw) {
+            if (strpos($ll, $bw) !== false) {
+                $bad = true;
+                break;
+            }
+        }
+        if ($bad)
+            continue;
+        $data['name'] = $isAllCaps ? ucwords(strtolower($line)) : $line;
+        $log[] = "Name: {$data['name']}";
+        break;
+    }
+
+    // ── Email ──────────────────────────────────────────────────────
+    if (preg_match('/[\w.\-+]+@[\w.\-]+\.\w{2,}/', $text, $m)) {
+        $data['email'] = strtolower($m[0]);
+    }
+
+    // ── Phone ──────────────────────────────────────────────────────
+    if (preg_match('/(?:\+91[\s\-]?|0)?([6-9]\d{9})/', $text, $m)) {
+        $data['phone'] = normalizePhone($m[0]);
+    }
+
+    // ── City / State / Country ─────────────────────────────────────
+    $indianStates = [
+        'Andhra Pradesh',
+        'Arunachal Pradesh',
+        'Assam',
+        'Bihar',
+        'Chhattisgarh',
+        'Goa',
+        'Gujarat',
+        'Haryana',
+        'Himachal Pradesh',
+        'Jharkhand',
+        'Karnataka',
+        'Kerala',
+        'Madhya Pradesh',
+        'Maharashtra',
+        'Manipur',
+        'Meghalaya',
+        'Mizoram',
+        'Nagaland',
+        'Odisha',
+        'Punjab',
+        'Rajasthan',
+        'Sikkim',
+        'Tamil Nadu',
+        'Telangana',
+        'Tripura',
+        'Uttar Pradesh',
+        'Uttarakhand',
+        'West Bengal',
+        'Delhi',
+        'Jammu and Kashmir',
+        'Ladakh',
+        'Chandigarh',
+        'Puducherry',
+    ];
+    foreach ($indianStates as $st) {
+        if (stripos($text, $st) !== false) {
+            $data['state'] = $st;
             break;
         }
     }
+    if (preg_match('/(?:city|location|address)\s*[:\-,]\s*([A-Z][a-z]{2,}(?:\s[A-Z][a-z]{2,})?)/i', $text, $m)) {
+        $data['city'] = trim($m[1]);
+    }
+    if (stripos($text, 'india') !== false || !empty($data['state'])) {
+        $data['country'] = 'India';
+    }
 
-    // ── Skills ────────────────────────────────────────────────
-    $skillKeywords = [
-        'Excel',
-        'PowerPoint',
+    // ── MBA CGPA ───────────────────────────────────────────────────
+    $cgpaPats = [
+        '/(?:mba|pgdm|pg)\b[^\n]{0,80}?(\d\.\d{1,2})\s*(?:\/\s*10)?/i',
+        '/(?:cgpa|c\.g\.p\.a)\s*[:=\-]?\s*(\d\.\d{1,2})/i',
+        '/(\d\.\d{1,2})\s*(?:cgpa|c\.g\.p\.a)/i',
+        '/(\d\.\d{1,2})\s*\/\s*10(?:\s|,|$)/i',
+        '/gpa\s*[:=]?\s*(\d\.\d{1,2})/i',
+    ];
+    foreach ($cgpaPats as $pat) {
+        if (preg_match($pat, $text, $m)) {
+            $v = (float) $m[1];
+            if ($v > 0 && $v <= 10) {
+                $data['cgpa'] = number_format($v, 2);
+                break;
+            }
+        }
+    }
+
+    // ── 10th % ─────────────────────────────────────────────────────
+    $tenthPats = [
+        '/(?:10th|x(?:th)?|ssc|matricul)[^\n]{0,60}?(\d{2,3}(?:\.\d{1,2})?)\s*%/i',
+        '/(?:10th|x(?:th)?|ssc|matricul)[^\n]{0,60}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:marks|percent)/i',
+        '/class\s*x\b[^\n]{0,80}?(\d{2,3}(?:\.\d{1,2})?)/i',
+        '/(\d{2,3}(?:\.\d{1,2})?)\s*%[^\n]{0,40}(?:10th|ssc)/i',
+    ];
+    foreach ($tenthPats as $pat) {
+        if (preg_match($pat, $text, $m)) {
+            $v = (float) $m[1];
+            if ($v >= 30 && $v <= 100) {
+                $data['tenth_percent'] = number_format($v, 2);
+                break;
+            }
+        }
+    }
+
+    // ── 12th % ─────────────────────────────────────────────────────
+    $twelfthPats = [
+        '/(?:12th|xii(?:th)?|hsc|intermediate|higher secondary|pu[c]?)\b[^\n]{0,60}?(\d{2,3}(?:\.\d{1,2})?)\s*%/i',
+        '/(?:12th|xii(?:th)?|hsc|intermediate)\b[^\n]{0,60}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:marks|percent)/i',
+        '/class\s*xii\b[^\n]{0,80}?(\d{2,3}(?:\.\d{1,2})?)/i',
+        '/(\d{2,3}(?:\.\d{1,2})?)\s*%[^\n]{0,40}(?:12th|hsc|xii)/i',
+    ];
+    foreach ($twelfthPats as $pat) {
+        if (preg_match($pat, $text, $m)) {
+            $v = (float) $m[1];
+            if ($v >= 30 && $v <= 100) {
+                $data['twelfth_percent'] = number_format($v, 2);
+                break;
+            }
+        }
+    }
+
+    // ── Graduation % ───────────────────────────────────────────────
+    // ── Degree CGPA (0–10 scale — maps to degree_cgpa form field) ───────────────
+    // NOTE: The DB field `degree_cgpa` stores on 0-10 scale, NOT percentage.
+    // If resume shows a %, divide by 10 to get CGPA. If already CGPA, use as-is.
+    $gradPats = [
+        // Pattern: CGPA value explicitly stated
+        '/(?:b\.?com|bba|b\.?sc|b\.?tech|b\.?e\.?|bca|b\.?a\.?|b\.?arch)\b[^\n]{0,60}?(\d\.\d{1,2})\s*(?:cgpa|\/\s*10)/i',
+        '/(?:bachelor|graduation|undergraduate|ug\b)\b[^\n]{0,60}?(\d\.\d{1,2})\s*(?:cgpa|\/\s*10)/i',
+        '/(?:degree|graduation)\s*cgpa\s*[:=]?\s*(\d\.\d{1,2})/i',
+        // Pattern: percentage stated — convert to CGPA by dividing by 10
+        '/(?:b\.?com|bba|b\.?sc|b\.?tech|b\.?e\.?|bca|b\.?a\.?|b\.?arch)\b[^\n]{0,80}?(\d{2,3}(?:\.\d{1,2})?)\s*%/i',
+        '/(?:bachelor|graduation|undergraduate|ug\b)\b[^\n]{0,60}?(\d{2,3}(?:\.\d{1,2})?)\s*%/i',
+    ];
+    foreach ($gradPats as $i => $pat) {
+        if (preg_match($pat, $text, $m)) {
+            $v = (float) $m[1];
+            if ($i >= 3) {
+                // These patterns found a percentage — convert to CGPA (% / 10)
+                if ($v >= 30 && $v <= 100)
+                    $v = round($v / 10, 2);
+                else
+                    continue;
+            }
+            if ($v > 0 && $v <= 10) {
+                $data['graduation_percent'] = number_format($v, 2);
+                break;
+            }
+        }
+    }
+
+    // ── Specialization ─────────────────────────────────────────────
+    $specMap = [
+        'Finance' => [
+            'finance',
+            'financial',
+            'accounting',
+            'accounts',
+            'banking',
+            'investment',
+            'taxation',
+            'insurance',
+            'fintech',
+            'treasury'
+        ],
+        'Marketing' => [
+            'marketing',
+            'market research',
+            'digital marketing',
+            'brand',
+            'sales',
+            'retail',
+            'advertising',
+            'seo',
+            'sem',
+            'social media'
+        ],
+        'HR' => [
+            'human resource',
+            'hr management',
+            'hrd',
+            'people management',
+            'talent acquisition',
+            'recruitment',
+            'hrm'
+        ],
+        'Operations' => [
+            'operations',
+            'supply chain',
+            'logistics',
+            'scm',
+            'procurement',
+            'project management',
+            'lean',
+            'six sigma',
+            'production'
+        ],
+        'IT' => [
+            'information technology',
+            'it management',
+            'mis',
+            'systems',
+            'business analytics',
+            'data analytics',
+            'data science',
+            'erp'
+        ],
+        'General' => ['general management', 'strategy', 'entrepreneurship'],
+    ];
+    $textL = strtolower($text);
+    foreach ($specMap as $spec => $keywords) {
+        foreach ($keywords as $kw) {
+            if (strpos($textL, $kw) !== false) {
+                $data['specialization'] = $spec;
+                break 2;
+            }
+        }
+    }
+
+    // ── Skills ─────────────────────────────────────────────────────
+    $skillList = [
+        'MS Excel',
+        'MS Word',
+        'MS PowerPoint',
+        'MS Office',
         'Tally',
         'SAP',
+        'ERP',
+        'CRM',
         'Python',
+        'R Programming',
         'SQL',
+        'MySQL',
+        'SPSS',
+        'SAS',
+        'MATLAB',
         'Tableau',
         'Power BI',
-        'Financial Analysis',
-        'Digital Marketing',
-        'SEO',
         'Google Analytics',
-        'Leadership',
-        'Communication',
-        'Team Management',
-        'Supply Chain',
-        'CRM',
-        'ERP',
         'Java',
         'PHP',
         'HTML',
-        'Market Research',
-        'Business Development',
-        'Negotiation',
-        'Presentation',
+        'CSS',
+        'JavaScript',
         'AutoCAD',
-        'SPSS',
-        'MS Office',
-        'MS Excel',
         'Canva',
-        'R Programming',
+        'Figma',
+        'Photoshop',
+        'Financial Analysis',
+        'Financial Modelling',
+        'Business Development',
+        'Business Analytics',
+        'Market Research',
+        'Digital Marketing',
+        'SEO',
+        'SEM',
+        'Supply Chain Management',
+        'Inventory Management',
+        'Project Management',
+        'Data Analysis',
+        'Data Visualization',
+        'Statistical Analysis',
+        'Leadership',
+        'Communication',
+        'Teamwork',
+        'Team Management',
+        'Problem Solving',
+        'Critical Thinking',
+        'Time Management',
+        'Presentation',
+        'Negotiation',
+        'Decision Making',
+        'Adaptability',
+        'Creativity',
     ];
-    // Short/ambiguous keywords that need word-boundary matching
-    $strictKeywords = ['R', 'Word', 'SAP', 'ERP', 'CRM', 'SEO', 'PHP', 'SQL', 'HTML'];
+    $found = [];
+    foreach ($skillList as $skill) {
+        if (preg_match('/\b' . preg_quote($skill, '/') . '\b/i', $text))
+            $found[] = $skill;
+    }
+    $data['skills'] = implode(', ', array_unique($found));
 
-    $foundSkills = [];
-    foreach ($skillKeywords as $skill) {
-        // Use word-boundary regex to avoid false positives (e.g. 'R' in 'Rahul')
-        $pattern = '/\b' . preg_quote($skill, '/') . '\b/i';
-        if (preg_match($pattern, $text)) {
-            $foundSkills[] = $skill;
+    // ── Certifications ─────────────────────────────────────────────
+    $certPats = [
+        '/(certified\s+in|certification\s+in|certificate\s+(?:in|of))[^\n]{5,100}/i',
+        '/(?:coursera|udemy|nptel|linkedin learning|edx|swayam|google|microsoft|aws)[^\n]{5,80}/i',
+        '/(?:diploma\s+in|workshop\s+on|training\s+in|course\s+(?:in|on))[^\n]{5,80}/i',
+    ];
+    $certs = [];
+    foreach ($certPats as $pat) {
+        preg_match_all($pat, $text, $cm);
+        foreach ($cm[0] as $c) {
+            $c = trim(preg_replace('/\s+/', ' ', $c));
+            if (strlen($c) > 8 && strlen($c) < 120)
+                $certs[] = $c;
         }
     }
-    // Also check strict single-word skills with word boundaries
-    foreach ($strictKeywords as $skill) {
-        $pattern = '/\b' . preg_quote($skill, '/') . '\b/i';
-        if (preg_match($pattern, $text)) {
-            $foundSkills[] = $skill;
-        }
-    }
-    // Deduplicate (case-insensitive)
-    $foundSkills = array_values(array_unique(array_map('strtolower', $foundSkills)));
-    $foundSkills = array_map('ucwords', $foundSkills);
-    $data['skills'] = implode(', ', $foundSkills);
-    if ($data['skills'])
-        $log[] = "Skills found: {$data['skills']}";
+    if ($certs)
+        $data['certifications'] = implode(', ', array_unique(array_slice($certs, 0, 5)));
 
-    // ── Certifications ────────────────────────────────────────
-    preg_match_all('/(certified|certification|certificate|course)[^\n]{5,80}/i', $text, $certMatches);
-    if (!empty($certMatches[0])) {
-        $certs = array_slice($certMatches[0], 0, 5);
-        $certs = array_map(function ($c) {
-            return trim(preg_replace('/\s+/', ' ', $c)); }, $certs);
-        $data['certifications'] = htmlspecialchars(implode(', ', $certs), ENT_QUOTES, 'UTF-8');
-        $log[] = "Certifications found: " . count($certs);
-    }
-
-    // ── Languages ─────────────────────────────────────────────
-    $langKeywords = [
+    // ── Languages ──────────────────────────────────────────────────
+    $langs = [
         'English',
         'Hindi',
         'Marathi',
@@ -524,42 +715,47 @@ function localParseResume(string $text, array &$log): array
         'Punjabi',
         'Urdu',
         'Odia',
-        'Assamese',
+        'French',
+        'German'
     ];
-    $foundLangs = [];
-    foreach ($langKeywords as $lang) {
-        if (stripos($text, $lang) !== false) {
-            $foundLangs[] = $lang;
-        }
+    $fl = [];
+    $lp = stripos($text, 'language');
+    $lchunk = $lp !== false ? substr($text, $lp, 300) : $text;
+    foreach ($langs as $l) {
+        if (stripos($lchunk, $l) !== false)
+            $fl[] = $l;
     }
-    $data['languages'] = implode(', ', $foundLangs);
-    if ($data['languages'])
-        $log[] = "Languages found: {$data['languages']}";
+    if (empty($fl))
+        foreach ($langs as $l) {
+            if (stripos($text, $l) !== false)
+                $fl[] = $l;
+        }
+    $data['languages'] = implode(', ', array_unique($fl));
 
-    // ── Work Experience ───────────────────────────────────────
-    $expPos = stripos($text, 'experience');
-    if ($expPos !== false) {
-        $expChunk = substr($text, $expPos, 400);
-        // Clean whitespace
-        $expChunk = preg_replace('/\s+/', ' ', $expChunk);
-        $expChunk = trim($expChunk);
-        $data['work_experience'] = htmlspecialchars($expChunk, ENT_QUOTES, 'UTF-8');
-        $log[] = "Work experience extracted (" . strlen($expChunk) . " chars)";
+    // ── Work Experience ─────────────────────────────────────────────
+    $expStart = -1;
+    foreach (['experience', 'internship', 'intern', 'employment'] as $kw) {
+        $pos = stripos($text, $kw);
+        if ($pos !== false && ($expStart === -1 || $pos < $expStart))
+            $expStart = $pos;
+    }
+    if ($expStart !== -1) {
+        $block = preg_replace('/\s+/', ' ', substr($text, $expStart, 600));
+        $sentences = preg_split('/(?<=[.!?])\s+/', trim($block), -1, PREG_SPLIT_NO_EMPTY);
+        $summary = implode(' ', array_slice($sentences, 0, 3));
+        if (strlen($summary) > 20)
+            $data['work_experience'] = $summary;
     }
 
     return $data;
 }
 
-/**
- * Returns empty data array with all expected keys.
- */
 function getEmptyData(): array
 {
     return [
         'name' => '',
         'email' => '',
         'phone' => '',
-        'linkedin' => '',
         'cgpa' => '',
         'specialization' => '',
         'tenth_percent' => '',
@@ -569,88 +765,61 @@ function getEmptyData(): array
         'work_experience' => '',
         'certifications' => '',
         'languages' => '',
+        'city' => '',
+        'state' => '',
+        'country' => '',
     ];
 }
 
-/**
- * Normalize specialization to our MBA dropdown values.
- */
 function normalizeSpecialization(string $val): string
 {
     if (!$val)
         return '';
-    $lower = strtolower($val);
-    if (strpos($lower, 'financ') !== false)
+    $l = strtolower(trim($val));
+    if (strpos($l, 'financ') !== false)
         return 'Finance';
-    if (strpos($lower, 'market') !== false)
+    if (strpos($l, 'market') !== false)
         return 'Marketing';
-    if (strpos($lower, 'hr') !== false || strpos($lower, 'human') !== false)
+    if (strpos($l, 'hr') !== false || strpos($l, 'human') !== false)
         return 'HR';
-    if (strpos($lower, 'operat') !== false || strpos($lower, 'supply') !== false)
+    if (strpos($l, 'operat') !== false || strpos($l, 'supply') !== false)
         return 'Operations';
-    if (strpos($lower, 'it') !== false || strpos($lower, 'information') !== false || strpos($lower, 'tech') !== false)
+    if (strpos($l, 'info') !== false || strpos($l, 'tech') !== false)
         return 'IT';
-    if ($val)
-        return 'General';
-    return '';
+    return 'General';
 }
 
-/**
- * Normalize phone number — extract 10-digit Indian mobile number.
- */
 function normalizePhone(string $val): string
 {
     if (!$val)
         return '';
-    // Strip non-digit characters
-    $digits = preg_replace('/\D/', '', $val);
-    // Remove +91 prefix if present (91 followed by 10 digits)
-    if (strlen($digits) === 12 && substr($digits, 0, 2) === '91') {
-        $digits = substr($digits, 2);
-    }
-    // Return last 10 digits if valid length
-    if (strlen($digits) >= 10) {
-        return substr($digits, -10);
-    }
-    return '';
+    $d = preg_replace('/\D/', '', $val);
+    if (strlen($d) === 12 && substr($d, 0, 2) === '91')
+        $d = substr($d, 2);
+    if (strlen($d) === 11 && $d[0] === '0')
+        $d = substr($d, 1);
+    return strlen($d) >= 10 ? substr($d, -10) : '';
 }
 
-/**
- * Basic PDF text extraction fallback (no library).
- * Extracts readable ASCII text from raw PDF bytes.
- * Less accurate than smalot/pdfparser but works without composer.
- */
 function extractTextFromPdfBasic(string $pdfContent): string
 {
-    // Extract text between stream and endstream markers
     $text = '';
     preg_match_all('/stream(.*?)endstream/s', $pdfContent, $streams);
     foreach ($streams[1] as $stream) {
-        // Try to decode if gzip/flate compressed
-        $decoded = @gzuncompress($stream);
-        if ($decoded !== false) {
-            $text .= $decoded . "\n";
-        } else {
-            $text .= $stream . "\n";
-        }
+        $dec = @gzuncompress(ltrim($stream));
+        $text .= ($dec !== false ? $dec : $stream) . "\n";
     }
-
-    // Extract readable ASCII characters, preserve spaces and newlines
     $readable = '';
     $len = strlen($text);
     for ($i = 0; $i < $len; $i++) {
-        $ord = ord($text[$i]);
-        if ($ord >= 32 && $ord <= 126) {
+        $o = ord($text[$i]);
+        if ($o >= 32 && $o <= 126)
             $readable .= $text[$i];
-        } elseif ($ord === 10 || $ord === 13) {
+        elseif ($o === 10 || $o === 13)
             $readable .= "\n";
-        }
     }
-
-    // Remove PDF operators and control characters
+    $readable = preg_replace('/[<>]\s*[0-9a-fA-F]+\s*[<>]/', ' ', $readable);
+    $readable = preg_replace('/\/\w+/', ' ', $readable);
     $readable = preg_replace('/\s+/', ' ', $readable);
-    $readable = preg_replace('/[<>]\s*[0-9a-fA-F]+\s*[<>]/', ' ', $readable); // hex strings
-    $readable = preg_replace('/\/\w+/', ' ', $readable); // PDF names like /Font /Page
-
     return trim($readable);
 }
