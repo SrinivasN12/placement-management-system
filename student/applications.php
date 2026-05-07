@@ -34,6 +34,11 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
 .right-col{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .btn-withdraw{background:#fff;color:#c62828;border:1.5px solid #ef9a9a;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
 .btn-withdraw:hover{background:#ffebee}
+.status-form{display:flex;gap:6px;align-items:center;margin-top:4px}
+.status-form select{padding:5px 8px;font-size:12px;border:1.5px solid #ddd;border-radius:7px;outline:none;font-weight:600}
+.status-form button{padding:5px 12px;font-size:12px;background:#1a237e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:600}
+.status-form button:hover{background:#3949ab}
+.self-label{font-size:11px;color:#888;margin-top:6px}
 .toast{border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px}
 .toast-success{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
 .toast-error{background:#ffebee;color:#c62828;border:1px solid #ef9a9a}
@@ -53,11 +58,15 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
 <?php if (isset($_GET['withdrawn'])): ?>
   <div class="toast toast-success">✅ Application withdrawn successfully. You can re-apply if the drive is still open.</div>
 <?php endif; ?>
+<?php if (isset($_GET['updated'])): ?>
+  <div class="toast toast-success">✅ Application status updated successfully.</div>
+<?php endif; ?>
 <?php if (isset($_GET['err'])): ?>
   <?php
     $msgs = [
-      'notfound' => 'Application not found.',
-      'cannotwithdraw' => 'You can only withdraw applications that are still in "Applied" status.',
+      'notfound'      => 'Application not found.',
+      'cannotwithdraw'=> 'You can only withdraw applications that are still in "Applied" status.',
+      'invalid'       => 'Invalid status selection.',
     ];
     $errMsg = $msgs[$_GET['err']] ?? 'An error occurred.';
   ?>
@@ -70,7 +79,7 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
   <div>
     <div class="app-title"><?= htmlspecialchars($a['job_title']) ?></div>
     <div class="app-company">🏢 <?= htmlspecialchars($a['company_name']) ?></div>
-    <div class="meta">Drive Date: <?= date('d M Y',strtotime($a['drive_date'])) ?> &nbsp;|&nbsp; Applied: <?= date('d M Y',strtotime($a['applied_at'])) ?></div>
+    <div class="meta">Drive Date: <?= date('d M Y',strtotime($a['drive_date'])) ?> &nbsp;|&nbsp; Applied: <?= date('d M Y, h:i A',strtotime($a['applied_at'])) ?></div>
   </div>
   <div class="right-col">
     <span class="badge-<?= $a['application_status'] ?>"><?= $a['application_status'] ?></span>
@@ -78,11 +87,24 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
     <div class="sel-date">🎉 Selected on <?= date('d M Y',strtotime($a['selection_date'])) ?></div>
     <?php endif; ?>
     <?php if ($a['application_status'] === 'Applied'): ?>
+    <!-- Withdraw -->
     <form method="POST" action="withdraw_application.php"
           onsubmit="return confirm('Withdraw your application for <?= htmlspecialchars(addslashes($a['job_title'])) ?> at <?= htmlspecialchars(addslashes($a['company_name'])) ?>? You can re-apply if the drive is still open.')">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="application_id" value="<?= $a['application_id'] ?>">
       <button type="submit" class="btn-withdraw">↩ Withdraw</button>
+    </form>
+    <!-- Self-report outcome -->
+    <div class="self-label">Report your outcome:</div>
+    <form method="POST" action="update_application_status.php" class="status-form"
+          onsubmit="return confirm('Mark this application as \'' + this.status.value + '\'?')">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="application_id" value="<?= $a['application_id'] ?>">
+      <select name="status">
+        <option value="Selected" style="color:#2e7d32">✅ Selected</option>
+        <option value="Rejected" style="color:#c62828">❌ Rejected</option>
+      </select>
+      <button type="submit">Update</button>
     </form>
     <?php endif; ?>
   </div>
