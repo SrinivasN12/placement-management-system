@@ -168,7 +168,7 @@ $placed_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT
             <a class="module-btn" href="manage_drives.php">📋 Manage Drives</a>
             <a class="module-btn" href="students.php">👥 View Students</a>
             <a class="module-btn" href="applications.php">📝 View Applications</a>
-            <a class="module-btn" href="selection.php">✅ Update Selection Status</a>
+            <!-- <a class="module-btn" href="selection.php">✅ Update Selection Status</a> -->
             <a class="module-btn" href="reports.php">📊 Analytics &amp; Reports</a>
             <a class="module-btn" href="notify.php">🔔 Send Notifications</a>
             <a class="module-btn" href="preplacement.php">📋 Pre-Placement Evaluation</a>
