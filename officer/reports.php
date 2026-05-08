@@ -38,7 +38,7 @@ while ($r = mysqli_fetch_assoc($status_res)) {
   $status_colors[] = $color_map[$r['application_status']] ?? '#8b5cf6';
 }
 
-// ── Department-wise Placement ─────────────────────────────
+// ── Pre-placement Evaluation Stats ─────────────────────────────
 $dept_res = mysqli_query(
   $conn,
   "SELECT s.department,
@@ -51,21 +51,6 @@ $dept_res = mysqli_query(
 $dept_rows = [];
 while ($r = mysqli_fetch_assoc($dept_res))
   $dept_rows[] = $r;
-
-// ── Batch-wise Placement ──────────────────────────────────
-// $batch_res = mysqli_query(
-//   $conn,
-//   "SELECT CONCAT(batch_start,'-',batch_end) AS batch,
-//             COUNT(DISTINCT s.student_id) AS total,
-//             SUM(CASE WHEN a.application_status='Selected' THEN 1 ELSE 0 END) AS placed
-//      FROM student s
-//      LEFT JOIN application a ON s.student_id=a.student_id
-//      WHERE batch_start IS NOT NULL
-//      GROUP BY batch ORDER BY batch_start ASC"
-// );
-// $batch_rows = [];
-// while ($r = mysqli_fetch_assoc($batch_res))
-//   $batch_rows[] = $r;
 
 // ── Batch-wise Placement ──────────────────────────────────
 $batch_rows = [];
@@ -103,27 +88,25 @@ while ($c = mysqli_fetch_assoc($companies_res)) {
   $company_counts[] = (int) $c['placements'];
 }
 
-// ── Monthly Application Trend ─────────────────────────────
-$trend_res = mysqli_query(
-  $conn,
-  "SELECT DATE_FORMAT(applied_at,'%b %Y') AS month,
-            COUNT(*) AS apps,
-            SUM(application_status='Selected') AS selected
-     FROM application
-     GROUP BY YEAR(applied_at), MONTH(applied_at)
-     ORDER BY YEAR(applied_at), MONTH(applied_at) ASC
-     LIMIT 12"
-);
-$trend_months = [];
-$trend_apps = [];
-$trend_selected = [];
-while ($r = mysqli_fetch_assoc($trend_res)) {
-  $trend_months[] = $r['month'];
-  $trend_apps[] = (int) $r['apps'];
-  $trend_selected[] = (int) $r['selected'];
-}
 
-// ── Pre-placement Evaluation Stats ───────────────────────
+
+// ── Alumni Insights ─────────────────────────────────────
+$alumni_total = (int)mysqli_fetch_assoc(mysqli_query($conn,
+  "SELECT COUNT(*) c FROM alumni"))['c'];
+
+
+$alumni_rec_total = (int)mysqli_fetch_assoc(mysqli_query($conn,
+  "SELECT COUNT(*) c FROM alumni_recommendation"))['c'];
+
+$alumni_rec_res = mysqli_query($conn,
+  "SELECT r.job_title, r.company_name, a.name AS alumni_name,
+          DATE_FORMAT(r.posted_at,'%d %b') AS posted
+   FROM alumni_recommendation r
+   JOIN alumni a ON r.alumni_id=a.alumni_id
+   ORDER BY r.posted_at DESC LIMIT 5");
+$alumni_recs = [];
+while ($ar = mysqli_fetch_assoc($alumni_rec_res)) $alumni_recs[] = $ar;
+
 $eval_res = mysqli_query(
   $conn,
   "SELECT
@@ -176,9 +159,7 @@ $js_batch_total = json_encode(array_map('intval', array_column($batch_rows, 'tot
 $js_batch_placed = json_encode(array_map('intval', array_column($batch_rows, 'placed')));
 $js_company_names = json_encode($company_names);
 $js_company_counts = json_encode($company_counts);
-$js_trend_months = json_encode($trend_months);
-$js_trend_apps = json_encode($trend_apps);
-$js_trend_selected = json_encode($trend_selected);
+// trend data removed — replaced by insights panel
 $js_cgpa = json_encode(array_values($cgpa));
 ?>
 <!DOCTYPE html>
@@ -1016,41 +997,105 @@ $js_cgpa = json_encode(array_values($cgpa));
       </div>
     </div>
 
-    <!-- ── Row 1: Trend + Donut ────────────────────────── -->
-    <div class="section-title">📉 Trends & Status</div>
-    <div class="grid-2-1" style="margin-bottom:24px">
-
-      <!-- Application Trend Line Chart -->
+    <!-- Application Status -->
+    <div class="section-title">📄 Application Status</div>
+    <div style="margin-bottom:24px">
       <div class="card">
-        <div class="card-title">📅 Monthly Application Trend</div>
-        <div class="chart-container" style="height:220px">
-          <canvas id="trendChart"></canvas>
-        </div>
-      </div>
+        <div class="card-title">🗂 Application Status Breakdown</div>
+        <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap">
 
-      <!-- Application Status Donut -->
-      <div class="card">
-        <div class="card-title">🗂 Application Status</div>
-        <div class="chart-wrap" style="position:relative;height:200px;display:flex;justify-content:center">
-          <canvas id="statusChart"></canvas>
-          <div class="donut-center">
-            <div class="big"><?= $total_apps ?></div>
-            <div class="sm">Total</div>
-          </div>
-        </div>
-        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
-          <?php foreach ($status_labels as $i => $lbl): ?>
-            <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)">
-              <span
-                style="width:10px;height:10px;border-radius:50%;background:<?= $status_colors[$i] ?>;display:inline-block"></span>
-              <?= htmlspecialchars($lbl) ?> (<?= $status_data[$i] ?>)
+          <!-- Donut -->
+          <div style="flex:0 0 200px;height:200px;position:relative;display:flex;justify-content:center">
+            <canvas id="statusChart"></canvas>
+            <div class="donut-center">
+              <div class="big"><?= $total_apps ?></div>
+              <div class="sm">Total</div>
             </div>
-          <?php endforeach; ?>
+          </div>
+
+          <!-- Breakdown bars -->
+          <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:12px">
+            <?php foreach ($status_labels as $i => $lbl):
+              $pct = $total_apps > 0 ? round(($status_data[$i] / $total_apps) * 100) : 0;
+            ?>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="width:10px;height:10px;border-radius:50%;background:<?= $status_colors[$i] ?>;flex-shrink:0;display:inline-block"></span>
+                  <span style="font-size:12px;font-weight:700;color:var(--text)"><?= htmlspecialchars($lbl) ?></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:13px;font-weight:800;color:var(--text)"><?= $status_data[$i] ?></span>
+                  <span style="font-size:11px;color:var(--muted);font-weight:600;min-width:32px;text-align:right"><?= $pct ?>%</span>
+                </div>
+              </div>
+              <div style="background:#f1f5f9;border-radius:6px;height:7px;overflow:hidden">
+                <div style="width:<?= $pct ?>%;height:7px;border-radius:6px;background:<?= $status_colors[$i] ?>;transition:width .7s ease"></div>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+
         </div>
       </div>
     </div>
 
-    <!-- ── Row 2: Batch + Placed vs Unplaced ──────────── -->
+    <!-- ── Alumni Insights ──────────────────────────────── -->
+    <div class="section-title">🎓 Alumni Insights</div>
+    <div class="grid-2" style="margin-bottom:24px">
+
+      <!-- Stat: Total Alumni -->
+      <div class="card" style="align-items:center;text-align:center">
+        <div style="font-size:38px;font-weight:800;color:var(--green)"><?= $alumni_total ?></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">Alumni Registered</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">in the network</div>
+      </div>
+
+      <!-- Stat: Job Recommendations -->
+      <div class="card" style="align-items:center;text-align:center">
+        <div style="font-size:38px;font-weight:800;color:#7c3aed"><?= $alumni_rec_total ?></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">Job Tips Shared</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">by alumni network</div>
+      </div>
+
+    </div>
+
+    <?php if (!empty($alumni_recs)): ?>
+    <!-- Recent Alumni Job Recommendations -->
+    <div class="grid-1" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-title">💼 Recent Alumni Job Recommendations</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Job Title</th>
+              <th>Company</th>
+              <th>Shared by</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($alumni_recs as $ar): ?>
+            <tr>
+              <td><strong><?= htmlspecialchars($ar['job_title']) ?></strong></td>
+              <td style="color:var(--muted)"><?= htmlspecialchars($ar['company_name']) ?></td>
+              <td>
+                <span style="display:inline-flex;align-items:center;gap:6px">
+                  <span style="width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <?= strtoupper(substr($ar['alumni_name'],0,1)) ?>
+                  </span>
+                  <?= htmlspecialchars($ar['alumni_name']) ?>
+                </span>
+              </td>
+              <td style="color:var(--muted);font-size:12px"><?= $ar['posted'] ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <div class="section-title">📅 Batch & Placement Overview</div>
     <div class="grid-2" style="margin-bottom:24px">
 
@@ -1214,7 +1259,6 @@ $js_cgpa = json_encode(array_values($cgpa));
               <th>Job Title</th>
               <th>Company</th>
               <th>Drive Date</th>
-              <th>Package</th>
               <th>Status</th>
               <th>Applications</th>
               <th>Selected</th>
@@ -1230,7 +1274,6 @@ $js_cgpa = json_encode(array_values($cgpa));
                 <td><strong><?= htmlspecialchars($d['job_title']) ?></strong></td>
                 <td><?= htmlspecialchars($d['company_name']) ?></td>
                 <td><?= date('d M Y', strtotime($d['drive_date'])) ?></td>
-                <td>—</td>
                 <td><span class="badge <?= $status_cls ?>"><span class="dot"
                       style="background:<?= $d['drive_status'] === 'Active' ? '#16a34a' : '#94a3b8' ?>"></span><?= $d['drive_status'] ?></span>
                 </td>
@@ -1273,44 +1316,6 @@ $js_cgpa = json_encode(array_values($cgpa));
     const AMBER = '#d97706';
     const RED = '#ef4444';
     const PURPLE = '#7c3aed';
-
-    // ── 1. Application Trend Line Chart ─────────────────────
-    const trendCtx = document.getElementById('trendChart');
-    if (trendCtx) {
-      new Chart(trendCtx, {
-        type: 'line',
-        data: {
-          labels: <?= $js_trend_months ?>,
-          datasets: [
-            {
-              label: 'Applications',
-              data: <?= $js_trend_apps ?>,
-              borderColor: BLUE,
-              backgroundColor: 'rgba(30,64,175,.08)',
-              tension: .4, fill: true,
-              pointBackgroundColor: BLUE, pointRadius: 4,
-            },
-            {
-              label: 'Selected',
-              data: <?= $js_trend_selected ?>,
-              borderColor: GREEN,
-              backgroundColor: 'rgba(27,94,32,.08)',
-              tension: .4, fill: true,
-              pointBackgroundColor: GREEN, pointRadius: 4,
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
-          scales: {
-            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } },
-            x: { grid: { display: false } }
-          }
-        }
-      });
-    }
 
     // ── 2. Application Status Donut ──────────────────────────
     const statusCtx = document.getElementById('statusChart');
@@ -1472,7 +1477,7 @@ $js_cgpa = json_encode(array_values($cgpa));
         }
 
         // Capture all rendered chart images as PNG data URLs
-        const canvasIds = ['trendChart', 'statusChart', 'batchChart', 'cgpaChart', 'placedChart'];
+        const canvasIds = ['statusChart', 'batchChart', 'cgpaChart', 'placedChart'];
         const chartImages = {};
         canvasIds.forEach(id => {
           const c = document.getElementById(id);
@@ -1535,11 +1540,6 @@ $js_cgpa = json_encode(array_values($cgpa));
 
         // All the original chart data for re-initialisation
         const chartData = {
-          trend: {
-            months: <?= $js_trend_months ?>,
-            apps: <?= $js_trend_apps ?>,
-            selected: <?= $js_trend_selected ?>
-          },
           status: {
             labels: <?= $js_status_labels ?>,
             data: <?= $js_status_data ?>,
@@ -1571,11 +1571,6 @@ $js_cgpa = json_encode(array_values($cgpa));
     img.parentNode.replaceChild(canvas, img);
   });
 
-  const trendCtx = document.getElementById('trendChart');
-  if(trendCtx) new Chart(trendCtx,{type:'line',data:{labels:CD.trend.months,datasets:[
-    {label:'Applications',data:CD.trend.apps,borderColor:BLUE,backgroundColor:'rgba(30,64,175,.08)',tension:.4,fill:true,pointBackgroundColor:BLUE,pointRadius:4},
-    {label:'Selected',data:CD.trend.selected,borderColor:GREEN,backgroundColor:'rgba(27,94,32,.08)',tension:.4,fill:true,pointBackgroundColor:GREEN,pointRadius:4}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{stepSize:1}},x:{grid:{display:false}}}}});
 
   const statusCtx = document.getElementById('statusChart');
   if(statusCtx) new Chart(statusCtx,{type:'doughnut',data:{labels:CD.status.labels,datasets:[{data:CD.status.data,backgroundColor:CD.status.colors,borderWidth:3,borderColor:'#fff',hoverBorderWidth:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.parsed}}}}});
