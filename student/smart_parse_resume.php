@@ -91,7 +91,7 @@ $method = 'gemini';
 $prompt = <<<'PROMPT'
 Extract resume data and return ONLY a valid JSON object with these exact keys. No markdown, no explanation.
 
-{"name":"","email":"","phone":"","cgpa":"","specialization":"","tenth_percent":"","twelfth_percent":"","graduation_percent":"","skills":"","work_experience":"","certifications":"","languages":""}
+{"name":"","email":"","phone":"","cgpa":"","specialization":"","tenth_percent":"","twelfth_percent":"","graduation_percent":"","skills":"","work_experience":"","certifications":"","languages":"","city":"","state":"","country":""}
 
 RULES:
 - name: Full name from top of resume, Title Case.
@@ -106,6 +106,9 @@ RULES:
 - work_experience: 2-3 sentence summary of all jobs/internships with role, company, duration.
 - certifications: Comma-separated courses/certs or empty.
 - languages: Comma-separated languages or empty.
+- city: City of residence extracted from address/contact section. Empty if not found.
+- state: Indian state extracted from address/contact section. Empty if not found.
+- country: Country of residence (usually "India"). Empty if not found.
 
 All values must be strings. Missing fields use "". JSON must be valid.
 
@@ -264,7 +267,10 @@ function sanitizeData(array $raw): array
         'skills',
         'work_experience',
         'certifications',
-        'languages'
+        'languages',
+        'city',
+        'state',
+        'country',
     ];
     foreach ($stringFields as $f) {
         $val = isset($raw[$f]) ? (string) $raw[$f] : '';
