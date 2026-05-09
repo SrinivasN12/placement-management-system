@@ -364,6 +364,28 @@ function sortIcon(string $col, string $currentSort, string $currentDir): string
       font-size: 14px
     }
 
+    .flash-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .flash-error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
     .top-row {
       display: flex;
       justify-content: space-between;
@@ -406,6 +428,11 @@ function sortIcon(string $col, string $currentSort, string $currentDir): string
   </div>
   <div class="page-wrap">
     <a class="back" href="dashboard.php">← Back to Dashboard</a>
+    <?php if (isset($_GET['updated'])): ?>
+      <div class="flash-success">✅ Application status updated successfully.</div>
+    <?php elseif (isset($_GET['err'])): ?>
+      <div class="flash-error">⚠️ Could not update status — <?= htmlspecialchars($_GET['err']) ?>.</div>
+    <?php endif; ?>
     <div class="top-row">
       <div>
         <h2>📋 Applications</h2>
