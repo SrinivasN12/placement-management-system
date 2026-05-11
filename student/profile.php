@@ -13,6 +13,7 @@ $success = $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   validate_csrf();
+  $uucms = strtoupper(trim($_POST['uucms_number']));
   $batch = trim($_POST['batch']);
   $spec = trim($_POST['specialization']);
   $cgpa = (float) $_POST['cgpa'];
@@ -27,31 +28,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $new_pass = $_POST['new_password'];
   $confirm = $_POST['confirm_password'];
 
-  if ($cgpa < 0 || $cgpa > 10) {
-    $error = "MBA CGPA must be 0–10.";
-  } elseif ($deg_cgpa < 0 || $deg_cgpa > 10) {
-    $error = "Degree CGPA must be 0–10.";
-  } elseif ($tenth < 0 || $tenth > 100) {
-    $error = "10th % must be 0–100.";
-  } elseif ($twelfth < 0 || $twelfth > 100) {
-    $error = "12th % must be 0–100.";
-  } elseif ($contact && !preg_match('/^\d{10}$/', $contact)) {
-    $error = "Contact must be 10 digits.";
-  } elseif ($new_pass && $new_pass !== $confirm) {
-    $error = "Passwords do not match.";
+  if (empty($uucms)) {
+    $error = "UUCMS number is required.";
+  } elseif (!preg_match('/^[A-Z0-9\-\/]+$/', $uucms)) {
+    $error = "UUCMS number may only contain letters, digits, hyphens, and slashes.";
   } else {
+    // Uniqueness check — exclude current student
+    $chku = mysqli_prepare($conn, "SELECT student_id FROM student WHERE uucms_number=? AND student_id!=?");
+    mysqli_stmt_bind_param($chku, "si", $uucms, $student_id);
+    mysqli_stmt_execute($chku);
+    mysqli_stmt_store_result($chku);
+    if (mysqli_stmt_num_rows($chku) > 0)
+      $error = "This UUCMS number is already used by another student.";
+    mysqli_stmt_close($chku);
+  }
+  if (!$error && $cgpa < 0 || $cgpa > 10) {
+    $error = "MBA CGPA must be 0–10.";
+  } elseif (!$error && ($deg_cgpa < 0 || $deg_cgpa > 10)) {
+    $error = "Degree CGPA must be 0–10.";
+  } elseif (!$error && ($tenth < 0 || $tenth > 100)) {
+    $error = "10th % must be 0–100.";
+  } elseif (!$error && ($twelfth < 0 || $twelfth > 100)) {
+    $error = "12th % must be 0–100.";
+  } elseif (!$error && $contact && !preg_match('/^\d{10}$/', $contact)) {
+    $error = "Contact must be 10 digits.";
+  } elseif (!$error && $new_pass && $new_pass !== $confirm) {
+    $error = "Passwords do not match.";
+  }
+  if (!$error) {
     $stmt = mysqli_prepare(
       $conn,
-      "UPDATE student SET batch=?,specialization=?,cgpa=?,backlogs=?,
+      "UPDATE student SET uucms_number=?,batch=?,specialization=?,cgpa=?,backlogs=?,
              tenth_percentage=?,twelfth_percentage=?,degree_cgpa=?,
              contact_number=?,country=?,state=?,city=?
              WHERE student_id=?"
     );
-    // type: s=batch,s=spec,d=cgpa,i=backlogs,d=10th,d=12th,d=degcgpa,s=contact,s=country,s=state,s=city,i=id
-    // 12 variables → 12 type chars: ssdidddssssi
+    // type: s=uucms,s=batch,s=spec,d=cgpa,i=backlogs,d=10th,d=12th,d=degcgpa,s=contact,s=country,s=state,s=city,i=id
     mysqli_stmt_bind_param(
       $stmt,
-      "ssdidddssssi",
+      "sssdidddssssi",
+      $uucms,
       $batch,
       $spec,
       $cgpa,
@@ -344,13 +360,14 @@ $batches = mbaBatches();
       .navbar {
         padding: 12px 16px;
       }
+      .navbar h1 { font-size: 15px; }
 
       .content {
-        padding: 20px 14px;
+        padding: 16px 12px;
       }
 
       .card {
-        padding: 18px 16px;
+        padding: 16px 14px;
       }
 
       .form-row {
@@ -360,6 +377,7 @@ $batches = mbaBatches();
 
       .btn {
         width: 100%;
+        padding: 13px;
       }
 
       .pc-pct {
@@ -373,6 +391,22 @@ $batches = mbaBatches();
       .info-grid {
         grid-template-columns: 1fr;
       }
+
+      /* UUCMS badge stacks icon + text vertically */
+      .uucms-val { font-size: 14px; letter-spacing: .8px; }
+
+      /* Progress bar chips wrap naturally */
+      .pc-chips { gap: 5px; }
+      .chip { font-size: 10px; padding: 3px 8px; }
+
+      /* Section back link */
+      .back { font-size: 12px; }
+      h2 { font-size: 17px; }
+    }
+
+    @media(max-width:380px) {
+      .content { padding: 12px 10px; }
+      .card h3 { font-size: 13px; }
     }
 
     /* ── Profile Completion Bar ─────────────────────────── */
@@ -527,6 +561,16 @@ $batches = mbaBatches();
       animation: fadein .5s ease;
     }
 
+    /* ── UUCMS shared style ─────────────────────────── */
+    .uucms-val {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 1.2px;
+      color: #1a237e;
+      text-transform: uppercase;
+    }
+
     @keyframes fadein {
       from {
         opacity: 0;
@@ -573,6 +617,7 @@ $batches = mbaBatches();
     <?php
     // Emit field values for JS (safely encoded)
     $pc_fields = [
+      'uucms_number' => $s['uucms_number'] ?? '',
       'batch' => $s['batch'] ?? '',
       'specialization' => $s['specialization'] ?? '',
       'cgpa' => $s['cgpa'] ?? '',
@@ -592,6 +637,16 @@ $batches = mbaBatches();
     <!-- VIEW CARD -->
     <div class="card">
       <h3>Account Information</h3>
+      <!-- UUCMS Badge -->
+      <div
+        style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,#e8eaf6,#f5f7ff);border-radius:10px;border-left:4px solid #3949ab">
+        <span style="font-size:18px">🪪</span>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#3949ab;text-transform:uppercase;letter-spacing:.8px">UUCMS
+            Number (Unique ID)</div>
+          <div class="uucms-val" style="font-size:16px"><?= htmlspecialchars($s['uucms_number'] ?? '—') ?></div>
+        </div>
+      </div>
       <div class="info-grid">
         <div class="info-row"><span class="lbl">Name</span><span class="val"><?= htmlspecialchars($s['name']) ?></span>
         </div>
@@ -667,11 +722,20 @@ $batches = mbaBatches();
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <!-- Chrome autofill absorbers: dummy hidden fields capture browser email/password autofill
              before it can land on real form fields like city or new_password -->
-        <input type="text"     name="_dummy_email" style="display:none" tabindex="-1" aria-hidden="true" autocomplete="username">
-        <input type="password" name="_dummy_pass"  style="display:none" tabindex="-1" aria-hidden="true" autocomplete="current-password">
+        <input type="text" name="_dummy_email" style="display:none" tabindex="-1" aria-hidden="true"
+          autocomplete="username">
+        <input type="password" name="_dummy_pass" style="display:none" tabindex="-1" aria-hidden="true"
+          autocomplete="current-password">
 
         <div class="section-title">MBA Programme</div>
         <div class="form-row">
+          <div class="form-group">
+            <label>UUCMS Number <span style="font-weight:400;color:#3949ab;font-size:11px">(University
+                ID)</span></label>
+            <input type="text" name="uucms_number" class="uucms-val"
+              value="<?= htmlspecialchars($s['uucms_number'] ?? '') ?>" placeholder="e.g. UUCMS2024001" required
+              style="background:#f0f2ff;border-color:#c5cae9">
+          </div>
           <div class="form-group">
             <label>Department</label>
             <input type="text" value="MBA" class="locked" readonly>
@@ -766,6 +830,7 @@ $batches = mbaBatches();
   <script>
     (function () {
       const labels = {
+        uucms_number: 'UUCMS No.',
         batch: 'Batch',
         specialization: 'Specialization',
         cgpa: 'MBA CGPA',

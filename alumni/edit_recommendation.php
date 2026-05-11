@@ -66,10 +66,12 @@ textarea{resize:vertical;min-height:110px}
 .btn-row{display:flex;gap:12px;align-items:center;margin-top:6px}
 @media(max-width:600px){
   .navbar{padding:12px 16px;}
-  .content{padding:20px 16px;}
+  .navbar h1{font-size:15px;}
+  .content{padding:18px 14px;}
   .card{padding:20px 18px;}
+  h2{font-size:18px;}
   .btn-row{flex-direction:column;}
-  .btn,.btn-sec{width:100%;text-align:center;}
+  .btn,.btn-sec{width:100%;text-align:center;padding:14px;font-size:15px;}
 }
 </style></head><body>
 <div class="navbar"><h1>🌐 PMS — Alumni Portal</h1><a href="../logout.php">Logout</a></div>

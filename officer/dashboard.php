@@ -10,10 +10,11 @@ if ($role_id != 2) {
 $officer_id = (int) ($_SESSION['officer_id'] ?? 0);
 
 // Stats
-$total_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM student"))['c'] ?? 0;
-$active_drives = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM placement_drive WHERE drive_date >= CURDATE()"))['c'] ?? 0;
-$total_apps = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM application"))['c'] ?? 0;
+$total_students  = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM student"))['c'] ?? 0;
+$active_drives   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM placement_drive WHERE drive_date >= CURDATE()"))['c'] ?? 0;
+$total_apps      = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM application"))['c'] ?? 0;
 $placed_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT student_id) c FROM application WHERE application_status='Selected'"))['c'] ?? 0;
+$pending_approvals = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c FROM user WHERE role_id=1 AND status='Pending'"))['c'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -118,17 +119,20 @@ $placed_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT
         }
 
         @media(max-width:600px) {
-            .navbar {
-                padding: 12px 16px;
-            }
-
-            .content {
-                padding: 20px 16px;
-            }
-
-            .module-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+            .navbar { padding: 12px 16px; }
+            .navbar h1 { font-size: 15px; }
+            .content { padding: 18px 14px; }
+            .welcome { font-size: 18px; }
+            .cards { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+            .card { padding: 18px 14px; }
+            .card h3 { font-size: 22px; }
+            .module-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+            .module-btn { padding: 12px 14px; font-size: 13px; }
+        }
+        @media(max-width:380px) {
+            .cards { grid-template-columns: 1fr 1fr; }
+            .module-grid { grid-template-columns: 1fr; }
+            .module-btn { font-size: 14px; padding: 13px 16px; }
         }
     </style>
 </head>
@@ -159,11 +163,23 @@ $placed_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT
                 <h3><?= $placed_students ?></h3>
                 <p>Students Placed</p>
             </div>
+            <div class="card" style="<?= $pending_approvals > 0 ? 'border:2px solid #e65100;' : '' ?>">
+                <h3 style="color:<?= $pending_approvals > 0 ? '#e65100' : '#1b5e20' ?>"><?= $pending_approvals ?></h3>
+                <p><?= $pending_approvals > 0 ? '⏳ Pending Approvals' : 'Pending Approvals' ?></p>
+            </div>
         </div>
 
         <div class="module-grid">
             <a class="module-btn" href="profile.php">⚙️ My Profile</a>
-
+            <?php if ($pending_approvals > 0): ?>
+            <a class="module-btn" href="approve_students.php"
+               style="background:#e65100;position:relative">
+              🧑‍🎓 Approve Registrations
+              <span style="position:absolute;top:-8px;right:-8px;background:#fff;color:#e65100;border:2px solid #e65100;border-radius:50%;width:22px;height:22px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center"><?= $pending_approvals ?></span>
+            </a>
+            <?php else: ?>
+            <a class="module-btn" href="approve_students.php" style="background:#4caf50">🧑‍🎓 Approve Registrations</a>
+            <?php endif; ?>
             <a class="module-btn" href="post_drive.php">➕ Post New Drive</a>
             <a class="module-btn" href="manage_drives.php">📋 Manage Drives</a>
             <a class="module-btn" href="students.php">👥 View Students</a>

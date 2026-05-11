@@ -39,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_close($stmt);
 
             if ($user && password_verify($password, $user['password'])) {
-                if ($user['status'] !== 'Active') {
+                if ($user['status'] === 'Pending') {
+                    $error = "⏳ Your registration is pending approval by the Placement Officer. Please wait for confirmation.";
+                } elseif ($user['status'] !== 'Active') {
                     $error = "Your account is inactive. Contact the administrator.";
                 } else {
                     $_SESSION['user_id'] = $user['user_id'];
@@ -155,6 +157,30 @@ function getRoleDashboard($role_id) {
         .register-links a:hover { text-decoration:underline; }
         .divider { border:none; border-top:1px solid #eee; margin:18px 0 14px; }
         .hint { font-size:11.5px; color:#aaa; text-align:center; margin-top:10px; }
+
+        /* ── Mobile ─────────────────────────────────────────── */
+        @media(max-width:700px) {
+            body { padding: 0; align-items: flex-start; }
+            .login-wrapper {
+                flex-direction: column;
+                width: 100%;
+                min-height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .left-panel { display: none; }
+            .right-panel {
+                width: 100%;
+                padding: 48px 28px 36px;
+                min-height: 100vh;
+            }
+            .logo-area { margin-bottom: 24px; }
+            .logo-area h2 { font-size: 22px; }
+            .btn-login { font-size: 16px; padding: 14px; }
+        }
+        @media(max-width:400px) {
+            .right-panel { padding: 36px 20px 28px; }
+        }
     </style>
 </head>
 <body>

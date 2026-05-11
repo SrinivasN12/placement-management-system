@@ -81,9 +81,27 @@ tr:hover td{background:#f9f9f9}
 .btn-confirm-del:hover{background:#b71c1c}
 @media(max-width:768px){
   .navbar{padding:12px 16px;}
-  .page-wrap{padding:20px 16px;}
+  .navbar h1{font-size:15px;}
+  .page-wrap{padding:18px 14px;}
   .filters{flex-direction:column;align-items:stretch;}
-  .filters input,.filters select,.btn-filter{width:100%;}
+  .filters input,.filters select,.btn-filter,.clear-link{width:100%;}
+  .clear-link{text-align:center;}
+  h2{font-size:17px;}
+  .back{font-size:12px;}
+  /* Table: allow horizontal scroll, add visual hint */
+  .table-wrap{border-radius:10px;-webkit-overflow-scrolling:touch;}
+  .table-wrap::after{
+    content:'← scroll →';display:block;text-align:center;
+    font-size:11px;color:#aaa;padding:6px 0 2px;
+  }
+  /* Modal compact */
+  .modal{padding:28px 22px;}
+  .modal h3{font-size:16px;}
+  .modal-btns{flex-direction:column;}
+  .btn-cancel,.btn-confirm-del{width:100%;}
+}
+@media(max-width:480px){
+  th,td{padding:8px 8px;font-size:11px;}
 }
 </style>
 </head><body>
@@ -119,6 +137,7 @@ tr:hover td{background:#f9f9f9}
 <table>
   <tr>
     <th>#</th>
+    <th>UUCMS No.</th>
     <th>Name</th>
     <th>Email</th>
     <th>Batch</th>
@@ -137,6 +156,7 @@ tr:hover td{background:#f9f9f9}
   <?php $i=1; $found=false; while ($s = mysqli_fetch_assoc($students)): $found=true; ?>
   <tr>
     <td><?= $i++ ?></td>
+    <td style="font-family:'Courier New',Courier,monospace;font-weight:700;color:#1a237e;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap"><?= htmlspecialchars($s['uucms_number'] ?? '—') ?></td>
     <td><strong><?= htmlspecialchars($s['name']) ?></strong></td>
     <td style="font-size:11px;color:#666"><?= htmlspecialchars($s['email']) ?></td>
     <td><?= htmlspecialchars($s['batch'] ?? '—') ?></td>
@@ -167,7 +187,7 @@ tr:hover td{background:#f9f9f9}
   </tr>
   <?php endwhile; ?>
   <?php if (!$found): ?>
-  <tr><td colspan="15" class="empty">No students found.</td></tr>
+  <tr><td colspan="16" class="empty">No students found.</td></tr>
   <?php endif; ?>
 </table>
 </div>

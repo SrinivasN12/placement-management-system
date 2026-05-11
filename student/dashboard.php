@@ -64,9 +64,20 @@ if ($student_id) {
         .badge-notready  { display:inline-block; background:#ffebee; color:#c62828; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; margin-top:14px; }
         @media(max-width:600px){
             .navbar{padding:12px 16px;}
-            .content{padding:20px 16px;}
-            .modules{grid-template-columns:1fr 1fr;}
+            .navbar h1{font-size:15px;}
+            .content{padding:18px 14px;}
+            .welcome{font-size:18px;}
+            .cards{gap:12px;margin-top:16px;}
+            .card{padding:18px 14px;}
+            .card h3{font-size:22px;}
+            .modules{grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}
+            .module-btn{padding:12px 14px;font-size:13px;}
             .pre-row{flex-direction:column;}
+            .pre-box{padding:18px 16px;}
+        }
+        @media(max-width:380px){
+            .modules{grid-template-columns:1fr;}
+            .module-btn{font-size:14px;padding:13px 16px;}
         }
     </style>
 </head>

@@ -62,9 +62,11 @@ textarea{resize:vertical;min-height:110px}
 .hint{font-size:12px;color:#aaa;margin-top:4px}
 @media(max-width:600px){
   .navbar{padding:12px 16px;}
-  .content{padding:20px 16px;}
+  .navbar h1{font-size:15px;}
+  .content{padding:18px 14px;}
   .card{padding:20px 18px;}
-  .btn{width:100%;}
+  .btn{width:100%;padding:14px;font-size:15px;}
+  h2{font-size:18px;}
 }
 </style></head><body>
 <div class="navbar"><h1>🌐 PMS — Alumni Portal</h1><a href="../logout.php">Logout</a></div>

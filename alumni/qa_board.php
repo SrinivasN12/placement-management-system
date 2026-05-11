@@ -372,12 +372,37 @@ $questions = mysqli_query($conn, "
         padding: 12px 16px
       }
 
+      .navbar h1 {
+        font-size: 15px
+      }
+
       .page-wrap {
-        padding: 20px 14px
+        padding: 18px 14px
       }
 
       .qa-hero {
-        padding: 22px 20px
+        padding: 18px 16px
+      }
+
+      .qa-hero h2 {
+        font-size: 18px
+      }
+
+      .qa-hero::before {
+        display: none
+      }
+
+      .stats-bar {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px
+      }
+
+      .stat-chip {
+        padding: 10px 12px
+      }
+
+      .stat-chip .num {
+        font-size: 20px
       }
 
       .q-card {
@@ -393,6 +418,19 @@ $questions = mysqli_query($conn, "
       .toolbar {
         flex-direction: column;
         align-items: stretch
+      }
+
+      .search-box {
+        min-width: unset
+      }
+
+      .tab {
+        text-align: center
+      }
+
+      .btn-answer {
+        margin-left: 0;
+        align-self: flex-start
       }
     }
   </style>
