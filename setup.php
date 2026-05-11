@@ -47,6 +47,7 @@ run($conn, "CREATE TABLE IF NOT EXISTS user (
 run($conn, "CREATE TABLE IF NOT EXISTS student (
     student_id          INT AUTO_INCREMENT PRIMARY KEY,
     user_id             INT          NOT NULL UNIQUE,
+    uucms_number        VARCHAR(30)  NOT NULL DEFAULT '' UNIQUE,
     name                VARCHAR(100) NOT NULL,
     department          VARCHAR(50)  NOT NULL DEFAULT 'MBA',
     batch               VARCHAR(10)  NOT NULL DEFAULT '2024-26',
@@ -66,6 +67,7 @@ run($conn, "CREATE TABLE IF NOT EXISTS student (
 
 // ── Migrate existing student table — add new columns safely ──
 $student_migrations = [
+    ["uucms_number",       "ALTER TABLE student ADD COLUMN uucms_number VARCHAR(30) NOT NULL DEFAULT '' AFTER user_id"],
     ["batch",              "ALTER TABLE student ADD COLUMN batch VARCHAR(10) NOT NULL DEFAULT '2024-26' AFTER department"],
     ["specialization",     "ALTER TABLE student ADD COLUMN specialization VARCHAR(50) NOT NULL DEFAULT 'General' AFTER batch"],
     ["tenth_percentage",   "ALTER TABLE student ADD COLUMN tenth_percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER cgpa"],
@@ -310,10 +312,10 @@ mysqli_query($conn, "INSERT INTO user (email,password,role_id,status) VALUES ('s
 $sid = mysqli_insert_id($conn);
 mysqli_query($conn,
     "INSERT INTO student
-     (user_id,name,department,batch,specialization,cgpa,backlogs,
+     (user_id,uucms_number,name,department,batch,specialization,cgpa,backlogs,
       tenth_percentage,twelfth_percentage,degree_cgpa,
       contact_number,country,state,city,preplacement_status)
-     VALUES ($sid,'Srinivas R Naragund','MBA','2024-26','Finance',8.50,0,
+     VALUES ($sid,'UUCMS2024001','Srinivas R Naragund','MBA','2024-26','Finance',8.50,0,
              82.00,78.50,7.80,'9876543210','India','Karnataka','Dharwad','Ready')");
 $log[] = "✅ Student created";
 

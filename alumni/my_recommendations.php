@@ -41,9 +41,16 @@ h2{color:#4a148c;margin-bottom:6px;font-size:20px}
 .no-link{font-size:12px;color:#aaa}
 @media(max-width:600px){
   .navbar{padding:12px 16px;}
-  .content{padding:20px 16px;}
+  .navbar h1{font-size:15px;}
+  .content{padding:18px 14px;}
+  h2{font-size:18px;}
   .top-bar{flex-direction:column;align-items:flex-start;gap:10px;}
+  .btn-add{width:100%;text-align:center;padding:12px;}
   .rec-footer{flex-direction:column;align-items:flex-start;}
+  .rec-card{padding:16px 18px;}
+}
+@media(max-width:380px){
+  .rec-title{font-size:14px;}
 }
 </style></head><body>
 <div class="navbar"><h1>🌐 PMS — Alumni Portal</h1><a href="../logout.php">Logout</a></div>

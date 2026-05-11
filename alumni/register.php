@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alumni Registration — PMS</title>
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
@@ -73,6 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .success { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; }
         .login-link { text-align:center; margin-top:18px; font-size:13px; color:#666; }
         .login-link a { color:#4a148c; font-weight:600; text-decoration:none; }
+        /* ── Mobile ── */
+        @media(max-width:600px) {
+            body { padding: 0; align-items: flex-start; }
+            .card { border-radius:0; min-height:100vh; padding:36px 22px 40px; box-shadow:none; max-width:100%; }
+            .btn { font-size:16px; padding:14px; }
+        }
     </style>
 </head>
 <body>

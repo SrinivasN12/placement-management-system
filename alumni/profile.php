@@ -57,10 +57,14 @@ input:focus{border-color:#4a148c}
 .back{display:inline-block;margin-bottom:18px;color:#4a148c;text-decoration:none;font-size:13px;font-weight:600}
 @media(max-width:600px){
   .navbar{padding:12px 16px;}
-  .content{padding:20px 16px;}
+  .navbar h1{font-size:15px;}
+  .content{padding:18px 14px;}
   .card{padding:18px 16px;}
-  div[style*='display:flex']{flex-direction:column;}
-  .btn{width:100%;}
+  .pass-row{flex-direction:column;}
+  .btn{width:100%;padding:13px;}
+  .info-row{flex-direction:column;gap:4px;}
+  .info-row .val{font-size:13px;}
+  h2{font-size:18px;}
 }
 </style></head><body>
 <div class="navbar"><h1>🌐 PMS — Alumni Portal</h1><a href="../logout.php">Logout</a></div>
@@ -86,7 +90,7 @@ input:focus{border-color:#4a148c}
       <label>Current Company</label>
       <input type="text" name="company_name" value="<?= htmlspecialchars($a['company_name']) ?>" required>
     </div>
-    <div style="display:flex;gap:16px">
+    <div class="pass-row" style="display:flex;gap:16px">
       <div class="form-group" style="flex:1">
         <label>New Password <span style="font-weight:400;color:#aaa">(leave blank to keep)</span></label>
         <input type="password" name="new_password" placeholder="New password">

@@ -140,11 +140,17 @@ textarea:focus{border-color:#4a148c}
 .alert-error{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px}
 @media(max-width:640px){
   .navbar{padding:12px 16px}
-  .page-wrap{padding:20px 14px}
+  .navbar h1{font-size:15px}
+  .page-wrap{padding:18px 14px}
   .q-card,.ans-form-card{padding:18px 16px}
   .q-title{font-size:17px}
-  .answer-card{flex-direction:column;gap:10px}
-  .vote-col{flex-direction:row;justify-content:flex-start}
+  .answer-card{flex-direction:column;gap:10px;padding:18px 16px}
+  .vote-col{flex-direction:row;justify-content:flex-start;gap:8px;min-width:unset}
+  .vote-label{display:none}
+  .btn-post{width:100%;margin-right:0;padding:13px;font-size:15px}
+  .q-meta{flex-direction:column;gap:6px;align-items:flex-start}
+  .alumni-chip{flex-wrap:wrap}
+  h2,.answers-header{font-size:17px}
 }
 </style></head><body>
 <div class="navbar"><h1>🌐 PMS — Alumni Portal</h1><a href="../logout.php">Logout</a></div>
