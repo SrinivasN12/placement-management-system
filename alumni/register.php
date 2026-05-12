@@ -24,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($name)||empty($email)||empty($company)||empty($password)) {
         $error = "All fields are required.";
-    } elseif (strlen($password) < 6) {
-        $error = "Password must be at least 6 characters.";
+    } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $password)) {
+        $error = "Password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character (e.g. @, #, !).";
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
     } else {
@@ -74,6 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .success { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; }
         .login-link { text-align:center; margin-top:18px; font-size:13px; color:#666; }
         .login-link a { color:#4a148c; font-weight:600; text-decoration:none; }
+        /* ── Password Strength ── */
+        .pw-wrap { position: relative; }
+        .pw-toggle { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #999; font-size: 15px; padding: 0; line-height: 1; }
+        .strength-bar { display: flex; gap: 4px; margin-top: 6px; }
+        .strength-bar span { flex: 1; height: 4px; border-radius: 4px; background: #e0e0e0; transition: background .25s; }
+        .strength-label { font-size: 11px; margin-top: 4px; font-weight: 600; }
+        .req-list { margin-top: 6px; list-style: none; }
+        .req-list li { font-size: 11px; color: #bbb; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; transition: color .2s; }
+        .req-list li.ok { color: #2e7d32; }
+        .req-list li::before { content: '✗'; font-size: 10px; }
+        .req-list li.ok::before { content: '✓'; }
         /* ── Mobile ── */
         @media(max-width:600px) {
             body { padding: 0; align-items: flex-start; }
@@ -105,16 +116,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="form-group">
             <label>Password</label>
-            <input type="password" name="password" placeholder="Min 6 chars" required>
+            <div class="pw-wrap">
+                <input type="password" id="pw" name="password" placeholder="Min 8 characters" required autocomplete="new-password">
+                <button type="button" class="pw-toggle" onclick="togglePw('pw',this)" tabindex="-1">👁</button>
+            </div>
+            <div class="strength-bar">
+                <span id="sb1"></span><span id="sb2"></span>
+                <span id="sb3"></span><span id="sb4"></span>
+            </div>
+            <div class="strength-label" id="slabel"></div>
+            <ul class="req-list">
+                <li id="r-len">At least 8 characters</li>
+                <li id="r-upper">One uppercase letter (A–Z)</li>
+                <li id="r-lower">One lowercase letter (a–z)</li>
+                <li id="r-digit">One digit (0–9)</li>
+                <li id="r-sym">One special character (!@#$…)</li>
+            </ul>
         </div>
         <div class="form-group">
             <label>Confirm Password</label>
-            <input type="password" name="confirm" placeholder="Repeat password" required>
+            <div class="pw-wrap">
+                <input type="password" id="pw2" name="confirm" placeholder="Repeat password" required autocomplete="new-password">
+                <button type="button" class="pw-toggle" onclick="togglePw('pw2',this)" tabindex="-1">👁</button>
+            </div>
+            <div class="strength-label" id="matchlabel" style="margin-top:6px"></div>
         </div>
         <button type="submit" class="btn">Register →</button>
     </form>
     <?php endif; ?>
     <div class="login-link">Already have an account? <a href="../index.php">Login</a></div>
+
+<script>
+const colors = ['#ef5350','#ff9800','#ffeb3b','#4caf50'];
+const labels = ['Weak','Fair','Good','Strong'];
+function checkPw() {
+    const v = document.getElementById('pw').value;
+    const reqs = {
+        len:   v.length >= 8,
+        upper: /[A-Z]/.test(v),
+        lower: /[a-z]/.test(v),
+        digit: /[0-9]/.test(v),
+        sym:   /[\W_]/.test(v)
+    };
+    document.getElementById('r-len').classList.toggle('ok', reqs.len);
+    document.getElementById('r-upper').classList.toggle('ok', reqs.upper);
+    document.getElementById('r-lower').classList.toggle('ok', reqs.lower);
+    document.getElementById('r-digit').classList.toggle('ok', reqs.digit);
+    document.getElementById('r-sym').classList.toggle('ok', reqs.sym);
+    const score = Object.values(reqs).filter(Boolean).length - 1;
+    ['sb1','sb2','sb3','sb4'].forEach((id,i) => {
+        document.getElementById(id).style.background = (v.length===0) ? '#e0e0e0' : (i<=score ? colors[Math.min(score,3)] : '#e0e0e0');
+    });
+    const lbl = document.getElementById('slabel');
+    if (v.length===0) { lbl.textContent=''; lbl.style.color=''; }
+    else { lbl.textContent=labels[Math.min(score,3)]; lbl.style.color=colors[Math.min(score,3)]; }
+    checkMatch();
+}
+function checkMatch() {
+    const v1=document.getElementById('pw').value;
+    const v2=document.getElementById('pw2').value;
+    const ml=document.getElementById('matchlabel');
+    if (!v2) { ml.textContent=''; return; }
+    ml.textContent = v1===v2 ? '✓ Passwords match' : '✗ Passwords do not match';
+    ml.style.color = v1===v2 ? '#2e7d32' : '#c62828';
+}
+function togglePw(id, btn) {
+    const inp=document.getElementById(id);
+    inp.type = inp.type==='password' ? 'text' : 'password';
+    btn.textContent = inp.type==='password' ? '👁' : '🙈';
+}
+document.getElementById('pw').addEventListener('input', checkPw);
+document.getElementById('pw2').addEventListener('input', checkMatch);
+document.querySelector('form').addEventListener('submit', function(e) {
+    const v = document.getElementById('pw').value;
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(v)) {
+        e.preventDefault();
+        alert('Password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.');
+    } else if (v !== document.getElementById('pw2').value) {
+        e.preventDefault();
+        alert('Passwords do not match.');
+    }
+});
+</script>
 </div>
 </body>
 </html>
