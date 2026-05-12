@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Insert student — remaining fields use column defaults (filled later via profile)
                 $s2 = mysqli_prepare($conn,
                     "INSERT INTO student (user_id,uucms_number,name,department,batch,specialization,preplacement_status)
-                     VALUES (?,?,'MBA',?,?,'Not Ready')");
+                     VALUES (?,?,?,'MBA',?,?,'Not Ready')");
                 mysqli_stmt_bind_param($s2, "issss", $uid, $uucms, $name, $batch, $spec);
                 mysqli_stmt_execute($s2);
                 mysqli_stmt_close($s2);
