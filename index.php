@@ -14,6 +14,12 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Redirect unauthenticated GET visitors to the landing page
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: landing.php');
+    exit();
+}
+
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
