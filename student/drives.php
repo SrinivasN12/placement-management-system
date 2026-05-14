@@ -61,6 +61,8 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
 .btn-apply:hover{background:#3949ab}
 .btn-applied{background:#e8f5e9;color:#2e7d32;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default}
 .btn-closed{background:#f5f5f5;color:#888;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default}
+.btn-mock-test{background:linear-gradient(135deg,#185FA5,#1a73e8);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.btn-mock-test:hover{opacity:.88}
 .desc{font-size:13px;color:#666;margin:8px 0;line-height:1.5}
 .empty{text-align:center;padding:60px;background:#fff;border-radius:14px;color:#888}
 .apply-result{margin-top:10px;font-size:13px;line-height:1.6;border-radius:8px;padding:0}
@@ -182,6 +184,11 @@ $hasActive = false;
           if (!$blOk)      echo "Backlogs: {$stu['backlogs']} &gt; {$d['max_backlogs']}";
         ?>
       </span>
+    <?php endif; ?>
+    <?php if ($d['drive_status'] !== 'Closed'): ?>
+    <button class="btn-mock-test" onclick="startMockTest(<?= $did ?>,'<?= addslashes(htmlspecialchars($d['company_name'])) ?>','<?= addslashes(htmlspecialchars($d['job_title'])) ?>')">
+      🎯 AI Mock Test
+    </button>
     <?php endif; ?>
   </div>
   <!-- Result box shown after AJAX apply -->
@@ -436,6 +443,384 @@ function showResult(driveId, success, data) {
 // ── Close modal on backdrop click ─────────────────────────────
 document.getElementById('ccModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+</script>
+
+<!-- ════════════════════════════════════════════════════════════
+     AI MOCK TEST MODAL
+     ════════════════════════════════════════════════════════════ -->
+<style>
+#mtModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+#mtModal.open{display:flex}
+.mt-box{background:#fff;border-radius:16px;width:100%;max-width:700px;margin:auto;box-shadow:0 16px 60px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
+.mt-head{background:linear-gradient(135deg,#185FA5,#1a73e8);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+.mt-head h3{font-size:16px;font-weight:700;margin:0}
+.mt-head-right{display:flex;align-items:center;gap:14px}
+.mt-timer{font-size:18px;font-weight:800;background:rgba(255,255,255,.2);padding:5px 12px;border-radius:8px;font-family:monospace;min-width:72px;text-align:center}
+.mt-timer.urgent{background:rgba(200,0,0,.4);animation:tpulse .6s infinite alternate}
+@keyframes tpulse{from{opacity:1}to{opacity:.6}}
+.mt-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;opacity:.8}
+.mt-close:hover{opacity:1}
+.mt-body{padding:22px 24px;overflow-y:auto;max-height:70vh}
+.mt-foot{padding:14px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+/* Step: difficulty */
+.diff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+.diff-card{border:2px solid #e0e0e0;border-radius:10px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .2s}
+.diff-card:hover{border-color:#185FA5;background:#f0f6ff}
+.diff-card.selected{border-color:#185FA5;background:#e8f0fe}
+.diff-card .diff-icon{font-size:26px;margin-bottom:6px}
+.diff-card .diff-label{font-size:13px;font-weight:700;color:#333}
+.diff-card .diff-sub{font-size:11px;color:#888;margin-top:3px}
+
+/* Step: loading */
+.mt-loading{text-align:center;padding:40px 20px}
+.mt-spinner{width:44px;height:44px;border:4px solid #e0e0e0;border-top-color:#185FA5;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mt-loading p{font-size:14px;color:#555;margin-top:6px}
+.mt-loading small{font-size:12px;color:#aaa}
+
+/* Step: questions */
+.mt-progress{height:5px;background:#e0e0e0;border-radius:3px;margin-bottom:18px;overflow:hidden}
+.mt-progress-bar{height:100%;background:#185FA5;border-radius:3px;transition:width .3s}
+.q-block{border:1px solid #e8e8e8;border-radius:10px;padding:16px 18px;margin-bottom:14px;transition:border-color .2s}
+.q-block:hover{border-color:#185FA5}
+.q-num{font-size:11px;font-weight:700;color:#185FA5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.q-cat-tag{display:inline-block;font-size:10px;background:#e8f0fe;color:#185FA5;padding:2px 7px;border-radius:8px;margin-left:6px;font-weight:600}
+.q-text{font-size:14px;font-weight:600;color:#222;line-height:1.5;margin-bottom:12px}
+.q-options{display:flex;flex-direction:column;gap:7px}
+.q-opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;border:1.5px solid #e8e8e8;transition:all .15s}
+.q-opt:hover{border-color:#185FA5;background:#f0f6ff}
+.q-opt input[type=radio]{margin-top:2px;accent-color:#185FA5;flex-shrink:0}
+.q-opt.answered{border-color:#185FA5;background:#e8f0fe}
+.q-opt label{font-size:13px;color:#333;cursor:pointer;line-height:1.4}
+
+/* Step: result */
+.score-card{text-align:center;padding:20px 10px}
+.score-ring{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px;font-weight:800;border:6px solid}
+.score-ring.pass{border-color:#3B6D11;color:#3B6D11;background:#f0f7e8}
+.score-ring.fail{border-color:#A32D2D;color:#A32D2D;background:#fff0f0}
+.score-meta{font-size:13px;color:#666;margin-top:4px}
+.result-list{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+.r-item{border-radius:10px;padding:14px 16px;border:1.5px solid}
+.r-item.correct{border-color:#b7dfb0;background:#f4fbf2}
+.r-item.wrong{border-color:#f5b8b8;background:#fff5f5}
+.r-q{font-size:13px;font-weight:600;color:#333;margin-bottom:6px}
+.r-ans{font-size:12px;margin-bottom:4px}
+.r-ans.ok{color:#3B6D11;font-weight:600}
+.r-ans.bad{color:#A32D2D;font-weight:600}
+.r-expl{font-size:12px;color:#555;background:rgba(0,0,0,.04);padding:6px 10px;border-radius:6px;margin-top:6px;line-height:1.5}
+
+/* Leaderboard embed area */
+.mt-lb-area{margin-top:16px;border:1px solid #e0e0e0;border-radius:10px;padding:16px;min-height:60px}
+
+/* Buttons */
+.btn-mt-primary{background:#185FA5;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-mt-primary:hover{background:#1a4f8a}
+.btn-mt-primary:disabled{background:#90a4ae;cursor:not-allowed}
+.btn-mt-secondary{background:#f5f5f5;color:#333;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-mt-secondary:hover{background:#e0e0e0}
+.btn-mt-lb{background:#fff;color:#185FA5;border:2px solid #185FA5;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-mt-lb:hover{background:#e8f0fe}
+
+@media(max-width:640px){
+  .mt-body{padding:16px;max-height:75vh}
+  .diff-grid{grid-template-columns:1fr}
+  .mt-timer{font-size:15px}
+}
+</style>
+
+<div id="mtModal">
+  <div class="mt-box" id="mtBox">
+    <!-- HEAD -->
+    <div class="mt-head">
+      <h3 id="mtTitle">🎯 AI Mock Test</h3>
+      <div class="mt-head-right">
+        <div class="mt-timer" id="mtTimer" style="display:none">10:00</div>
+        <button class="mt-close" onclick="closeMockModal()" title="Close">✕</button>
+      </div>
+    </div>
+    <!-- BODY -->
+    <div class="mt-body" id="mtBody">
+      <!-- Step content rendered by JS -->
+    </div>
+    <!-- FOOT -->
+    <div class="mt-foot" id="mtFoot"></div>
+  </div>
+</div>
+
+<script>
+// ── Mock Test State ────────────────────────────────────────────
+const MT = {
+  driveId:    null,
+  company:    '',
+  role:       '',
+  difficulty: 'medium',
+  testId:     null,
+  questions:  [],
+  answers:    {},
+  startedAt:  null,
+  timerEl:    null,
+  timerInterval: null,
+  DURATION:   20 * 30, // 30 seconds per question × 20 questions = 600s
+};
+
+function startMockTest(driveId, company, role) {
+  MT.driveId   = driveId;
+  MT.company   = company;
+  MT.role      = role;
+  MT.difficulty= 'medium';
+  MT.testId    = null;
+  MT.questions = [];
+  MT.answers   = {};
+  clearInterval(MT.timerInterval);
+  document.getElementById('mtTimer').style.display = 'none';
+  document.getElementById('mtTitle').textContent   = '🎯 AI Mock Test';
+  renderDifficultyStep();
+  document.getElementById('mtModal').classList.add('open');
+}
+
+function closeMockModal() {
+  if (MT.timerInterval) {
+    if (MT.testId && !confirm('Close the test? Your progress will be lost.')) return;
+    clearInterval(MT.timerInterval);
+    MT.timerInterval = null;
+  }
+  document.getElementById('mtModal').classList.remove('open');
+}
+
+// ── Step 1: Difficulty selector ────────────────────────────────
+function renderDifficultyStep() {
+  document.getElementById('mtTimer').style.display = 'none';
+  document.getElementById('mtBody').innerHTML = `
+    <p style="font-size:14px;color:#555;margin-bottom:16px">
+      <strong>${MT.company}</strong> — ${MT.role}<br>
+      <span style="font-size:12px;color:#888">Select difficulty and we'll generate 10 personalised MCQs using AI.</span>
+    </p>
+    <div class="diff-grid">
+      ${['easy','medium','hard'].map(d => `
+        <div class="diff-card ${d==='medium'?'selected':''}" id="dc-${d}" onclick="selectDiff('${d}')">
+          <div class="diff-icon">${d==='easy'?'🌱':d==='medium'?'⚡':'🔥'}</div>
+          <div class="diff-label">${d.charAt(0).toUpperCase()+d.slice(1)}</div>
+          <div class="diff-sub">${d==='easy'?'Foundational concepts':d==='medium'?'Balanced challenge':'Advanced & tricky'}</div>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('mtFoot').innerHTML = `
+    <button class="btn-mt-secondary" onclick="closeMockModal()">Cancel</button>
+    <button class="btn-mt-primary" id="btnGenerate" onclick="generateTest()">Generate Test →</button>`;
+}
+
+function selectDiff(d) {
+  MT.difficulty = d;
+  ['easy','medium','hard'].forEach(x => {
+    const el = document.getElementById('dc-'+x);
+    if (el) el.classList.toggle('selected', x === d);
+  });
+}
+
+// ── Step 2: Generate (loading) ─────────────────────────────────
+function generateTest() {
+  document.getElementById('mtBody').innerHTML = `
+    <div class="mt-loading">
+      <div class="mt-spinner"></div>
+      <p>AI is crafting your personalised test…</p>
+      <small>This may take up to 20 seconds on first load.</small>
+    </div>`;
+  document.getElementById('mtFoot').innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('drive_id',   MT.driveId);
+  fd.append('difficulty', MT.difficulty);
+
+  fetch('generate_mock_test.php', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showMtError(data.error); return; }
+      MT.testId    = data.mock_test_id;
+      MT.questions = data.questions;
+      MT.answers   = {};
+      renderQuestionsStep();
+    })
+    .catch(() => showMtError('Network error. Please check your connection and try again.'));
+}
+
+// ── Step 3: Questions + timer ──────────────────────────────────
+function renderQuestionsStep() {
+  document.getElementById('mtTitle').textContent = `🎯 ${MT.difficulty.charAt(0).toUpperCase()+MT.difficulty.slice(1)} Test`;
+  const timerEl = document.getElementById('mtTimer');
+  timerEl.style.display = 'block';
+
+  MT.startedAt = Math.floor(Date.now()/1000);
+  let remaining = MT.DURATION;
+  clearInterval(MT.timerInterval);
+
+  function tick() {
+    remaining--;
+    if (remaining < 0) { clearInterval(MT.timerInterval); submitTest(true); return; }
+    const m = String(Math.floor(remaining/60)).padStart(2,'0');
+    const s = String(remaining%60).padStart(2,'0');
+    timerEl.textContent = `${m}:${s}`;
+    timerEl.classList.toggle('urgent', remaining <= 120);
+  }
+  tick();
+  MT.timerInterval = setInterval(tick, 1000);
+
+  let qHtml = '<div class="mt-progress"><div class="mt-progress-bar" id="mtProg" style="width:0%"></div></div>';
+  MT.questions.forEach((q, i) => {
+    const opts = q.options.map((opt, oi) =>
+      `<div class="q-opt" id="opt-${i}-${oi}" onclick="selectAnswer(${i},${oi})">
+        <input type="radio" name="q${i}" id="r${i}-${oi}" value="${oi}">
+        <label for="r${i}-${oi}">${opt}</label>
+      </div>`).join('');
+    qHtml += `
+      <div class="q-block" id="qblock-${i}">
+        <div class="q-num">Q${i+1} <span class="q-cat-tag">${q.category||''}</span></div>
+        <div class="q-text">${q.question}</div>
+        <div class="q-options">${opts}</div>
+      </div>`;
+  });
+
+  document.getElementById('mtBody').innerHTML = qHtml;
+  document.getElementById('mtFoot').innerHTML = `
+    <span id="mtAnsCount" style="font-size:12px;color:#888;align-self:center">0/${MT.questions.length} answered</span>
+    <button class="btn-mt-secondary" onclick="closeMockModal()">Cancel</button>
+    <button class="btn-mt-primary" onclick="submitTest(false)">Submit Test ✓</button>`;
+}
+
+function selectAnswer(qi, oi) {
+  MT.answers[qi] = oi;
+  // Highlight selected option, clear siblings
+  MT.questions[qi].options.forEach((_, x) => {
+    const el = document.getElementById(`opt-${qi}-${x}`);
+    if (el) el.classList.toggle('answered', x === oi);
+  });
+  // Update radio
+  const radio = document.getElementById(`r${qi}-${oi}`);
+  if (radio) radio.checked = true;
+  // Progress bar
+  const done = Object.keys(MT.answers).length;
+  const pct  = Math.round((done / MT.questions.length) * 100);
+  const pb   = document.getElementById('mtProg');
+  if (pb) pb.style.width = pct + '%';
+  const cnt = document.getElementById('mtAnsCount');
+  if (cnt) cnt.textContent = `${done}/${MT.questions.length} answered`;
+}
+
+// ── Step 4: Submit ─────────────────────────────────────────────
+function submitTest(autoSubmit) {
+  clearInterval(MT.timerInterval);
+  MT.timerInterval = null;
+  document.getElementById('mtTimer').style.display = 'none';
+
+  const unanswered = MT.questions.length - Object.keys(MT.answers).length;
+  if (!autoSubmit && unanswered > 0) {
+    if (!confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) {
+      // Re-start timer with remaining time is lost — restart guard
+      renderQuestionsStep();
+      return;
+    }
+  }
+
+  document.getElementById('mtBody').innerHTML = `
+    <div class="mt-loading">
+      <div class="mt-spinner"></div>
+      <p>Grading your answers…</p>
+    </div>`;
+  document.getElementById('mtFoot').innerHTML = '';
+
+  const elapsed = Math.floor(Date.now()/1000) - MT.startedAt;
+  const payload = { mock_test_id: MT.testId, answers: MT.answers, time_taken: Math.min(elapsed, MT.DURATION) };
+
+  fetch('submit_mock_test.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showMtError(data.error); return; }
+      renderScorecard(data);
+    })
+    .catch(() => showMtError('Network error during submission. Please try again.'));
+}
+
+// ── Step 5: Scorecard ──────────────────────────────────────────
+function renderScorecard(data) {
+  document.getElementById('mtTitle').textContent = '📊 Your Results';
+  const pct     = data.percentage;
+  const passed  = pct >= 60;
+  const mins    = String(Math.floor(data.time_taken/60)).padStart(2,'0');
+  const secs    = String(data.time_taken%60).padStart(2,'0');
+
+  if (data.duplicate) {
+    document.getElementById('mtBody').innerHTML = `
+      <div class="score-card">
+        <p style="font-size:14px;color:#BA7517;margin-bottom:8px">⚠️ You already submitted this test.</p>
+        <p style="font-size:13px;color:#555">Score: <strong>${data.score}/${data.total}</strong> (${data.percentage}%)</p>
+      </div>`;
+    document.getElementById('mtFoot').innerHTML = `<button class="btn-mt-secondary" onclick="closeMockModal()">Close</button>`;
+    return;
+  }
+
+  let reviewHtml = '';
+  (data.results||[]).forEach((r, i) => {
+    const yourOpt   = r.your_answer >= 0 ? r.options[r.your_answer] : 'Not answered';
+    const corrOpt   = r.options[r.correct_answer] || '';
+    reviewHtml += `
+      <div class="r-item ${r.is_correct?'correct':'wrong'}">
+        <div class="r-q">Q${i+1}: ${r.question}</div>
+        <div class="r-ans ${r.is_correct?'ok':'bad'}">Your answer: ${yourOpt} ${r.is_correct?'✅':'❌'}</div>
+        ${!r.is_correct?`<div class="r-ans ok">Correct: ${corrOpt}</div>`:''}
+        ${r.explanation?`<div class="r-expl">💡 ${r.explanation}</div>`:''}
+      </div>`;
+  });
+
+  document.getElementById('mtBody').innerHTML = `
+    <div class="score-card">
+      <div class="score-ring ${passed?'pass':'fail'}">${pct}%</div>
+      <div style="font-size:20px;font-weight:700;color:${passed?'#3B6D11':'#A32D2D'}">${passed?'🎉 Well Done!':'💪 Keep Practising'}</div>
+      <div class="score-meta">${data.score} / ${data.total} correct &nbsp;•&nbsp; Time: ${mins}:${secs}</div>
+    </div>
+    <div class="result-list">${reviewHtml}</div>
+    <div id="lbArea" class="mt-lb-area" style="display:none">
+      <div style="font-size:13px;color:#888;text-align:center">Loading leaderboard…</div>
+    </div>`;
+
+  document.getElementById('mtFoot').innerHTML = `
+    <button class="btn-mt-secondary" onclick="closeMockModal()">Close</button>
+    <button class="btn-mt-lb" onclick="loadLeaderboard(${MT.driveId})">🏆 View Leaderboard</button>`;
+}
+
+function loadLeaderboard(driveId) {
+  const area = document.getElementById('lbArea');
+  area.style.display = 'block';
+  area.scrollIntoView({behavior:'smooth', block:'nearest'});
+  area.innerHTML = '<div style="text-align:center;padding:20px;color:#888;font-size:13px">Loading leaderboard…</div>';
+  document.querySelector('.btn-mt-lb').style.display = 'none';
+
+  fetch(`leaderboard_widget.php?drive_id=${driveId}`)
+    .then(r => r.text())
+    .then(html => { area.innerHTML = html; })
+    .catch(() => { area.innerHTML = '<p style="color:#c62828;font-size:13px;text-align:center">Could not load leaderboard.</p>'; });
+}
+
+// ── Error helper ───────────────────────────────────────────────
+function showMtError(msg) {
+  clearInterval(MT.timerInterval);
+  document.getElementById('mtTimer').style.display = 'none';
+  document.getElementById('mtBody').innerHTML = `
+    <div style="text-align:center;padding:30px">
+      <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+      <p style="font-size:14px;color:#A32D2D;font-weight:600">${msg}</p>
+    </div>`;
+  document.getElementById('mtFoot').innerHTML = `
+    <button class="btn-mt-secondary" onclick="closeMockModal()">Close</button>
+    <button class="btn-mt-primary" onclick="renderDifficultyStep()">Try Again</button>`;
+}
+
+// Close on backdrop click
+document.getElementById('mtModal').addEventListener('click', function(e) {
+  if (e.target === this) closeMockModal();
 });
 </script>
 </body></html>
