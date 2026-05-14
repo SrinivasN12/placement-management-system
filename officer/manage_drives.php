@@ -57,6 +57,8 @@ tr:hover td{background:#f9f9f9}
 .empty{text-align:center;padding:48px;color:#888;font-size:14px}
 .last-date-soon{color:#e65100;font-weight:600}
 .last-date-closed{color:#aaa}
+.btn-analytics{background:#185FA5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600}
+.btn-analytics:hover{background:#1a4f8a}
 @media(max-width:768px){
   .navbar{padding:12px 16px;}
   .page-wrap{padding:20px 16px;}
