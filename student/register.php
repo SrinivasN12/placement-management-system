@@ -82,109 +82,64 @@ $batches         = mbaBatches();
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Registration — MBA PMS</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a237e, #3949ab); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 30px; }
-        .card { background: #fff; border-radius: 14px; padding: 36px 40px; width: 100%; max-width: 560px; box-shadow: 0 16px 48px rgba(0,0,0,.3); }
-        h2 { color: #1a237e; margin-bottom: 4px; font-size: 20px; }
-        .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
-        .section-title { font-size: 12px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: .6px; margin: 22px 0 14px; padding-bottom: 6px; border-bottom: 2px solid #e8eaf6; }
-        .form-row { display: flex; gap: 14px; }
-        .form-row .form-group { flex: 1; }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; background: #fff; }
-        input:focus, select:focus { border-color: #3949ab; }
-        .btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #1a237e, #3949ab); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-        .btn:hover { opacity: .9; }
-        .error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
-        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
-        .login-link { text-align: center; margin-top: 18px; font-size: 13px; color: #666; }
-        .login-link a { color: #3949ab; font-weight: 600; text-decoration: none; }
-        .hint { font-size: 11px; color: #aaa; margin-top: 2px; }
-        /* ── Password Strength ── */
-        .pw-wrap { position: relative; }
-        .pw-toggle { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #999; font-size: 15px; padding: 0; line-height: 1; }
-        .strength-bar { display: flex; gap: 4px; margin-top: 6px; }
-        .strength-bar span { flex: 1; height: 4px; border-radius: 4px; background: #e0e0e0; transition: background .25s; }
-        .strength-label { font-size: 11px; margin-top: 4px; font-weight: 600; }
-        .req-list { margin-top: 6px; list-style: none; }
-        .req-list li { font-size: 11px; color: #bbb; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; transition: color .2s; }
-        .req-list li.ok { color: #2e7d32; }
-        .req-list li::before { content: '✗'; font-size: 10px; }
-        .req-list li.ok::before { content: '✓'; }
-        /* ── UUCMS shared style ── */
-        .uucms-val {
-          font-family: 'Courier New', Courier, monospace;
-          font-weight: 700;
-          font-size: 15px;
-          letter-spacing: 1.2px;
-          color: #1a237e;
-          text-transform: uppercase;
-        }
-        /* ── Mobile ── */
-        @media(max-width:600px) {
-            body { padding: 0; align-items: flex-start; }
-            .card {
-                border-radius: 0;
-                min-height: 100vh;
-                padding: 32px 20px 40px;
-                box-shadow: none;
-                max-width: 100%;
-            }
-            .form-row { flex-direction: column; gap: 0; }
-            .btn { font-size: 16px; padding: 14px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MBA Student Registration — JSS DVH-IMSR Placement Management System">
+<title>Student Registration — MBA PMS</title>
+<link rel="stylesheet" href="../assets/pms-theme.css">
 </head>
 <body>
-<div class="card">
-    <h2>🎓 MBA Student Registration</h2>
-    <p class="subtitle">Create your PMS account — JSS Shri Manjunatheshwara Institute</p>
+<div class="auth-page-bg">
+<div class="auth-card" style="max-width:580px">
+  <div class="auth-card-accent"></div>
+  <div class="auth-card-body">
+    <div class="auth-logo-wrap">
+      <img src="../assets/logo.jpg" alt="JSS DVH-IMSR" class="auth-logo-img">
+      <span class="auth-role-badge">🎓 Student Registration</span>
+    </div>
+    <h1 class="auth-title">MBA Student Registration</h1>
+    <p class="auth-sub">Create your PMS account — JSS DVH-IMSR College</p>
 
-    <?php if ($error): ?><div class="error">⚠ <?= htmlspecialchars($error) ?></div><?php endif; ?>
-    <?php if ($success): ?><div class="success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
+    <?php if ($error): ?><div class="alert-error">⚠ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+    <?php if ($success): ?><div class="alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
 
     <?php if (!$success): ?>
     <form method="POST">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-        <div class="section-title">Account Details</div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Full Name *</label>
-                <input type="text" name="name" placeholder="e.g. Aditya Kumar"
+        <div class="form-section-hd">Account Details</div>
+        <div class="form-row-2">
+            <div class="form-group-sm">
+                <label class="form-label-sm">Full Name *</label>
+                <input type="text" name="name" class="form-ctrl" placeholder="e.g. Aditya Kumar"
                     value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required>
             </div>
-            <div class="form-group">
-                <label>Email Address *</label>
-                <input type="email" name="email" placeholder="your@email.com"
+            <div class="form-group-sm">
+                <label class="form-label-sm">Email Address *</label>
+                <input type="email" name="email" class="form-ctrl" placeholder="your@email.com"
                     value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
             </div>
         </div>
-        <div class="form-group">
-            <label>UUCMS Number * <span class="hint">(University Unique Candidate Management System ID)</span></label>
-            <input type="text" name="uucms_number" class="uucms-val" placeholder="e.g. UUCMS2024001"
+        <div class="form-group-sm">
+            <label class="form-label-sm">UUCMS Number * <span style="font-size:10px;text-transform:none;font-weight:400">(University Unique Candidate Management System ID)</span></label>
+            <input type="text" name="uucms_number" class="form-ctrl uucms-val" placeholder="e.g. UUCMS2024001"
                 value="<?= htmlspecialchars(strtoupper($_POST['uucms_number'] ?? '')) ?>" required>
         </div>
 
-        <div class="section-title">MBA Programme</div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Batch *</label>
-                <select name="batch" required>
+        <div class="form-section-hd">MBA Programme</div>
+        <div class="form-row-2">
+            <div class="form-group-sm">
+                <label class="form-label-sm">Batch *</label>
+                <select name="batch" class="form-ctrl" required>
                     <option value="">-- Select Batch --</option>
                     <?php foreach ($batches as $b): ?>
                     <option value="<?= $b ?>" <?= ($_POST['batch'] ?? '') === $b ? 'selected' : '' ?>><?= $b ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group">
-                <label>Specialization *</label>
-                <select name="specialization" required>
+            <div class="form-group-sm">
+                <label class="form-label-sm">Specialization *</label>
+                <select name="specialization" class="form-ctrl" required>
                     <option value="">-- Select --</option>
                     <?php foreach ($specializations as $s): ?>
                     <option value="<?= $s ?>" <?= ($_POST['specialization'] ?? '') === $s ? 'selected' : '' ?>><?= $s ?></option>
@@ -193,12 +148,12 @@ $batches         = mbaBatches();
             </div>
         </div>
 
-        <div class="section-title">Password</div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Password *</label>
+        <div class="form-section-hd">Password</div>
+        <div class="form-row-2">
+            <div class="form-group-sm">
+                <label class="form-label-sm">Password *</label>
                 <div class="pw-wrap">
-                    <input type="password" id="pw" name="password" placeholder="Min 8 characters" required autocomplete="new-password">
+                    <input type="password" id="pw" name="password" class="form-ctrl" placeholder="Min 8 characters" required autocomplete="new-password">
                     <button type="button" class="pw-toggle" onclick="togglePw('pw',this)" tabindex="-1">👁</button>
                 </div>
                 <div class="strength-bar">
@@ -214,20 +169,20 @@ $batches         = mbaBatches();
                     <li id="r-sym">One special character (!@#$…)</li>
                 </ul>
             </div>
-            <div class="form-group">
-                <label>Confirm Password *</label>
+            <div class="form-group-sm">
+                <label class="form-label-sm">Confirm Password *</label>
                 <div class="pw-wrap">
-                    <input type="password" id="pw2" name="confirm" placeholder="Repeat password" required autocomplete="new-password">
+                    <input type="password" id="pw2" name="confirm" class="form-ctrl" placeholder="Repeat password" required autocomplete="new-password">
                     <button type="button" class="pw-toggle" onclick="togglePw('pw2',this)" tabindex="-1">👁</button>
                 </div>
                 <div class="strength-label" id="matchlabel" style="margin-top:6px"></div>
             </div>
         </div>
 
-        <button type="submit" class="btn" id="submitBtn">Register →</button>
+        <button type="submit" class="btn-gold" id="submitBtn" style="width:100%;justify-content:center;padding:13px;font-size:15px;margin-top:10px">Register →</button>
     </form>
     <?php endif; ?>
-    <div class="login-link">Already have an account? <a href="../index.php">Login</a></div>
+    <div class="auth-link-row">Already have an account? <a href="../landing.php">Login</a></div>
 
 <script>
 const colors = ['#ef5350','#ff9800','#ffeb3b','#4caf50'];
@@ -284,6 +239,8 @@ document.querySelector('form').addEventListener('submit', function(e) {
     }
 });
 </script>
+  </div>
+</div>
 </div>
 </body>
 </html>
