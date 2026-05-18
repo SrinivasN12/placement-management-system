@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $error = "This UUCMS number is already used by another student.";
     mysqli_stmt_close($chku);
   }
-  if (!$error && $cgpa < 0 || $cgpa > 10) {
+  if (!$error && ($cgpa < 0 || $cgpa > 10)) {
     $error = "MBA CGPA must be 0–10.";
   } elseif (!$error && ($deg_cgpa < 0 || $deg_cgpa > 10)) {
     $error = "Degree CGPA must be 0–10.";
