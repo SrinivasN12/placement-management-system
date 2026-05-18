@@ -38,196 +38,204 @@ $flash_error   = match($_GET['error'] ?? '') {
     'dberror'  => '⚠ Database error — deletion rolled back. No data was changed.',
     default    => ''
 };
+
+$page_title  = 'All Students — MBA PMS';
+$active_page = 'students';
+require_once '_nav.php';
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>All Students — MBA PMS</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
-.navbar{background:#1b5e20;color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.navbar h1{font-size:18px}.navbar a{color:#fff;text-decoration:none;font-size:13px}
-.page-wrap{max-width:1400px;margin:0 auto;padding:32px 24px}
-h2{color:#1b5e20;margin-bottom:6px;font-size:20px}
-.sub{color:#666;font-size:13px;margin-bottom:20px}
-.filters{display:flex;gap:10px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap}
-.filters input,.filters select{padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none}
-.filters input:focus,.filters select:focus{border-color:#1b5e20}
-.btn-filter{background:#1b5e20;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.clear-link{font-size:13px;color:#c62828;text-decoration:none;align-self:center}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);min-width:1100px}
-th{background:#1b5e20;color:#fff;padding:11px 12px;font-size:12px;text-align:left}
-td{padding:10px 12px;font-size:12px;color:#333;border-bottom:1px solid #f0f0f0;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#f9f9f9}
-.br{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-.bnr{background:#ffebee;color:#c62828;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-.bp{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-.back{display:inline-block;margin-bottom:18px;color:#1b5e20;text-decoration:none;font-size:13px;font-weight:600}
-.empty{text-align:center;padding:40px;color:#888;font-size:14px}
-.btn-del{background:#c62828;color:#fff;border:none;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s}
-.btn-del:hover{background:#b71c1c}
-.flash-ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px}
-.flash-err{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px}
-/* Modal */
-.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
-.modal-backdrop.show{display:flex}
-.modal{background:#fff;border-radius:14px;padding:36px 40px;max-width:420px;width:92%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.2)}
-.modal h3{color:#c62828;font-size:18px;margin-bottom:10px}
-.modal p{font-size:13px;color:#555;margin-bottom:24px;line-height:1.6}
-.modal-btns{display:flex;gap:12px;justify-content:center}
-.btn-cancel{background:#eee;color:#333;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-cancel:hover{background:#ddd}
-.btn-confirm-del{background:#c62828;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-confirm-del:hover{background:#b71c1c}
-@media(max-width:768px){
-  .navbar{padding:12px 16px;}
-  .navbar h1{font-size:15px;}
-  .page-wrap{padding:18px 14px;}
-  .filters{flex-direction:column;align-items:stretch;}
-  .filters input,.filters select,.btn-filter,.clear-link{width:100%;}
-  .clear-link{text-align:center;}
-  h2{font-size:17px;}
-  .back{font-size:12px;}
-  /* Table: allow horizontal scroll, add visual hint */
-  .table-wrap{border-radius:10px;-webkit-overflow-scrolling:touch;}
-  .table-wrap::after{
-    content:'← scroll →';display:block;text-align:center;
-    font-size:11px;color:#aaa;padding:6px 0 2px;
-  }
-  /* Modal compact */
-  .modal{padding:28px 22px;}
-  .modal h3{font-size:16px;}
-  .modal-btns{flex-direction:column;}
-  .btn-cancel,.btn-confirm-del{width:100%;}
-}
-@media(max-width:480px){
-  th,td{padding:8px 8px;font-size:11px;}
-}
-</style>
-</head><body>
-<div class="navbar"><h1>🏢 PMS — Placement Officer Portal</h1><a href="../logout.php">Logout</a></div>
-<div class="page-wrap">
-<a class="back" href="dashboard.php">← Back to Dashboard</a>
-<h2>👥 All MBA Students</h2>
-<?php if ($flash_success): ?><div class="flash-ok"><?= $flash_success ?></div><?php endif; ?>
-<?php if ($flash_error):   ?><div class="flash-err"><?= $flash_error ?></div><?php endif; ?>
-<p class="sub">Search, filter and monitor student placement readiness across specializations and batches.</p>
 
-<form method="GET" class="filters">
-  <input type="text" name="search" placeholder="Search name or email…" value="<?= htmlspecialchars($search) ?>">
-  <select name="spec">
-    <option value="">All Specializations</option>
-    <?php foreach ($specializations as $s): ?>
-    <option value="<?= $s ?>" <?= $spec === $s ? 'selected' : '' ?>><?= $s ?></option>
-    <?php endforeach; ?>
-  </select>
-  <select name="batch">
-    <option value="">All Batches</option>
-    <?php foreach ($batches as $b): ?>
-    <option value="<?= $b ?>" <?= $batch === $b ? 'selected' : '' ?>><?= $b ?></option>
-    <?php endforeach; ?>
-  </select>
-  <button type="submit" class="btn-filter">Filter</button>
-  <?php if ($search || $spec || $batch): ?>
-  <a class="clear-link" href="students.php">✕ Clear</a>
+<div class="page-content">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="dashboard.php"><i class="bi bi-house me-1"></i>Dashboard</a></li>
+      <li class="breadcrumb-item active">All Students</li>
+    </ol>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="page-header mb-3">
+    <h1><i class="bi bi-people me-2"></i>All MBA Students</h1>
+    <p class="sub">Search, filter and monitor student placement readiness across specializations and batches.</p>
+  </div>
+
+  <!-- Flash Messages -->
+  <?php if ($flash_success): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <?= $flash_success ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
   <?php endif; ?>
-</form>
-
-<div class="table-wrap">
-<table>
-  <tr>
-    <th>#</th>
-    <th>UUCMS No.</th>
-    <th>Name</th>
-    <th>Email</th>
-    <th>Batch</th>
-    <th>Specialization</th>
-    <th>Contact</th>
-    <th>City / State</th>
-    <th>10th%</th>
-    <th>12th%</th>
-    <th>Deg CGPA</th>
-    <th>MBA CGPA</th>
-    <th>Backlogs</th>
-    <th>Pre-Placement</th>
-    <th>Apps / Placed</th>
-    <th>Action</th>
-  </tr>
-  <?php $i=1; $found=false; while ($s = mysqli_fetch_assoc($students)): $found=true; ?>
-  <tr>
-    <td><?= $i++ ?></td>
-    <td style="font-family:'Courier New',Courier,monospace;font-weight:700;color:#1a237e;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap"><?= htmlspecialchars($s['uucms_number'] ?? '—') ?></td>
-    <td><strong><?= htmlspecialchars($s['name']) ?></strong></td>
-    <td style="font-size:11px;color:#666"><?= htmlspecialchars($s['email']) ?></td>
-    <td><?= htmlspecialchars($s['batch'] ?? '—') ?></td>
-    <td><?= htmlspecialchars($s['specialization'] ?? '—') ?></td>
-    <td><?= htmlspecialchars($s['contact_number'] ?? '—') ?></td>
-    <td style="font-size:11px"><?= htmlspecialchars(($s['city'] ?? '') . ', ' . ($s['state'] ?? '')) ?></td>
-    <td><?= $s['tenth_percentage'] ?? '—' ?>%</td>
-    <td><?= $s['twelfth_percentage'] ?? '—' ?>%</td>
-    <td><?= $s['degree_cgpa'] ?? '—' ?></td>
-    <td><?= $s['cgpa'] ?></td>
-    <td><?= $s['backlogs'] ?></td>
-    <td><?php
-      $st = $s['eval_status'] ?? $s['preplacement_status'];
-      if ($st === 'Ready') echo '<span class="br">✅ Ready</span>';
-      elseif ($st === 'Not Ready') echo '<span class="bnr">⚠ Not Ready</span>';
-      else echo '<span style="color:#888;font-size:11px">Pending</span>';
-    ?></td>
-    <td><?= $s['total_apps'] ?> / <?php if ($s['placed'] > 0) echo '<span class="bp">'.$s['placed'].' placed</span>'; else echo '0'; ?></td>
-    <td style="white-space:nowrap">
-      <a href="applications.php?student_id=<?= $s['student_id'] ?>"
-         style="color:#1b5e20;font-weight:600;font-size:11px;text-decoration:none;margin-right:8px">Apps →</a>
-      <button class="btn-del"
-              onclick="confirmDelete(<?= $s['student_id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')"
-              title="Permanently delete this student">
-        🗑 Delete
-      </button>
-    </td>
-  </tr>
-  <?php endwhile; ?>
-  <?php if (!$found): ?>
-  <tr><td colspan="16" class="empty">No students found.</td></tr>
+  <?php if ($flash_error): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <?= $flash_error ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
   <?php endif; ?>
-</table>
-</div>
-</div>
 
-<!-- Confirmation Modal -->
-<div class="modal-backdrop" id="delModal">
-  <div class="modal">
-    <h3>⚠ Delete Student?</h3>
-    <p>You are about to permanently delete <strong id="delName"></strong>.<br>
-       This will remove all their applications, notifications, resumes,
-       ATS scores, and login account.<br><br>
-       <strong style="color:#c62828">This action cannot be undone.</strong></p>
-    <form id="delForm" method="POST" action="delete_student.php">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="student_id" id="delStudentId">
-      <div class="modal-btns">
-        <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn-confirm-del">Yes, Delete Permanently</button>
+  <!-- Filters -->
+  <div class="card pms-card mb-3 p-3">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-12 col-sm-6 col-lg-4">
+        <label class="form-label small fw-semibold text-muted mb-1">Search</label>
+        <input type="text" class="form-control form-control-sm" name="search"
+               placeholder="Name or email…" value="<?= htmlspecialchars($search) ?>">
       </div>
+      <div class="col-6 col-sm-3 col-lg-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Specialization</label>
+        <select class="form-select form-select-sm" name="spec">
+          <option value="">All Specializations</option>
+          <?php foreach ($specializations as $s): ?>
+            <option value="<?= $s ?>" <?= $spec === $s ? 'selected' : '' ?>><?= $s ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-6 col-sm-3 col-lg-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Batch</label>
+        <select class="form-select form-select-sm" name="batch">
+          <option value="">All Batches</option>
+          <?php foreach ($batches as $b): ?>
+            <option value="<?= $b ?>" <?= $batch === $b ? 'selected' : '' ?>><?= $b ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-pms btn-sm px-3">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+      </div>
+      <?php if ($search || $spec || $batch): ?>
+      <div class="col-auto">
+        <a href="students.php" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Clear
+        </a>
+      </div>
+      <?php endif; ?>
     </form>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>UUCMS No.</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Batch</th>
+            <th>Specialization</th>
+            <th>Contact</th>
+            <th>City / State</th>
+            <th>10th%</th>
+            <th>12th%</th>
+            <th>Deg CGPA</th>
+            <th>MBA CGPA</th>
+            <th>Backlogs</th>
+            <th>Pre-Placement</th>
+            <th>Apps / Placed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php $i = 1; $found = false; while ($s = mysqli_fetch_assoc($students)): $found = true; ?>
+          <tr>
+            <td class="text-muted"><?= $i++ ?></td>
+            <td><span class="uucms-id"><?= htmlspecialchars($s['uucms_number'] ?? '—') ?></span></td>
+            <td><strong><?= htmlspecialchars($s['name']) ?></strong></td>
+            <td class="text-muted small"><?= htmlspecialchars($s['email']) ?></td>
+            <td><?= htmlspecialchars($s['batch'] ?? '—') ?></td>
+            <td><?= htmlspecialchars($s['specialization'] ?? '—') ?></td>
+            <td><?= htmlspecialchars($s['contact_number'] ?? '—') ?></td>
+            <td class="small"><?= htmlspecialchars(($s['city'] ?? '') . ', ' . ($s['state'] ?? '')) ?></td>
+            <td><?= $s['tenth_percentage'] ?? '—' ?>%</td>
+            <td><?= $s['twelfth_percentage'] ?? '—' ?>%</td>
+            <td><?= $s['degree_cgpa'] ?? '—' ?></td>
+            <td><?= $s['cgpa'] ?></td>
+            <td><?= $s['backlogs'] ?></td>
+            <td>
+              <?php
+                $st = $s['eval_status'] ?? $s['preplacement_status'];
+                if ($st === 'Ready')     echo '<span class="badge-ready">✅ Ready</span>';
+                elseif ($st === 'Not Ready') echo '<span class="badge-notready">⚠ Not Ready</span>';
+                else echo '<span class="text-muted small">Pending</span>';
+              ?>
+            </td>
+            <td>
+              <?= $s['total_apps'] ?> /
+              <?php if ($s['placed'] > 0): ?>
+                <span class="badge-applied"><?= $s['placed'] ?> placed</span>
+              <?php else: ?>
+                <span class="text-muted">0</span>
+              <?php endif; ?>
+            </td>
+            <td style="white-space:nowrap">
+              <a href="applications.php?student_id=<?= $s['student_id'] ?>"
+                 class="btn btn-outline-pms btn-sm me-1" title="View Applications">
+                <i class="bi bi-file-earmark-text"></i>
+              </a>
+              <button class="btn btn-danger btn-sm"
+                      onclick="confirmDelete(<?= $s['student_id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')"
+                      title="Delete Student">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </td>
+          </tr>
+          <?php endwhile; ?>
+          <?php if (!$found): ?>
+          <tr>
+            <td colspan="16" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>No students found.
+            </td>
+          </tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="delModal" tabindex="-1" aria-labelledby="delModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title" id="delModalLabel"><i class="bi bi-exclamation-triangle me-2"></i>Delete Student?</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">You are about to permanently delete <strong id="delName"></strong>.</p>
+        <p class="text-muted small mb-3">This will remove all their applications, notifications, resumes, ATS scores, and login account.</p>
+        <div class="alert alert-danger py-2 mb-0">
+          <i class="bi bi-exclamation-octagon me-1"></i>
+          <strong>This action cannot be undone.</strong>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <form id="delForm" method="POST" action="delete_student.php">
+          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+          <input type="hidden" name="student_id" id="delStudentId">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger ms-2">
+            <i class="bi bi-trash3 me-1"></i>Yes, Delete Permanently
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const delModal = new bootstrap.Modal(document.getElementById('delModal'));
 function confirmDelete(id, name) {
-    document.getElementById('delStudentId').value = id;
-    document.getElementById('delName').textContent = name;
-    document.getElementById('delModal').classList.add('show');
+  document.getElementById('delStudentId').value = id;
+  document.getElementById('delName').textContent = name;
+  delModal.show();
 }
-function closeModal() {
-    document.getElementById('delModal').classList.remove('show');
-}
-// Close on backdrop click
-document.getElementById('delModal').addEventListener('click', function(e){
-    if (e.target === this) closeModal();
-});
-// Close on Escape key
-document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') closeModal();
-});
 </script>
-</body></html>
+</body>
+</html>
