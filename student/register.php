@@ -182,7 +182,7 @@ $batches         = mbaBatches();
         <button type="submit" class="btn-gold" id="submitBtn" style="width:100%;justify-content:center;padding:13px;font-size:15px;margin-top:10px">Register →</button>
     </form>
     <?php endif; ?>
-    <div class="auth-link-row">Already have an account? <a href="../landing.php">Login</a></div>
+    <div class="login-link">Already have an account? <a href="../login.php">Login</a></div>
 
 <script>
 const colors = ['#ef5350','#ff9800','#ffeb3b','#4caf50'];

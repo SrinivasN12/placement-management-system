@@ -39,7 +39,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $min_tenth, $min_twelfth, $min_deg,
             $drive_date, $last_date, $officer_id);
 
-        if (mysqli_stmt_execute($stmt)) {
+        try {
+            $executed = mysqli_stmt_execute($stmt);
+        } catch (mysqli_sql_exception $e) {
+            $executed = false;
+            if ($e->getCode() === 1062) {
+                $error = "A drive for \"$job_title\" at \"$company\" already exists. Please edit the existing drive or choose a different job title / company.";
+            } else {
+                $error = "Failed to post drive: " . $e->getMessage();
+            }
+        }
+
+        if (!isset($error) && $executed) {
             $drive_id = mysqli_insert_id($conn);
 
             // ── Save custom criteria ──────────────────────────────────
@@ -84,17 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Drive posted successfully{$ccNote}! Eligible students have been notified.";
 
             // ── Send email notifications to eligible students ──
-            // This runs after the DB insert succeeds.
-            // If email sending fails, the drive is still posted.
             try {
                 send_placement_drive_emails($drive_id, $conn);
             } catch (\Throwable $e) {
                 error_log('[post_drive.php] Email notification error: ' . $e->getMessage());
             }
-        } elseif (mysqli_errno($conn) === 1062) {
-            $error = "A drive for \"$job_title\" at \"$company\" already exists. Please edit the existing drive or use a different job title / company name.";
-        } else {
-            $error = "Failed to post drive: " . mysqli_error($conn);
         }
         mysqli_stmt_close($stmt);
     }

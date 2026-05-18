@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($target_uid && in_array($action, ['approve', 'reject'])) {
         // Confirm the user is actually a Pending student
-        $chk = mysqli_prepare($conn, "SELECT u.user_id, s.name FROM user u JOIN student s ON s.user_id=u.user_id WHERE u.user_id=? AND u.role_id=1 AND u.status='Pending'");
+        $chk = mysqli_prepare($conn, "SELECT u.user_id, COALESCE(s.name, u.email) AS name FROM user u LEFT JOIN student s ON s.user_id=u.user_id WHERE u.user_id=? AND u.role_id=1 AND u.status='Pending'");
         mysqli_stmt_bind_param($chk, "i", $target_uid);
         mysqli_stmt_execute($chk);
         $row = mysqli_fetch_assoc(mysqli_stmt_get_result($chk));
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_bind_param($upd, "si", $new_status, $target_uid);
             mysqli_stmt_execute($upd);
             mysqli_stmt_close($upd);
-            $sname = htmlspecialchars($row['name']);
+            $sname = htmlspecialchars($row['name'] ?? $row['email']);
             $msg_ok = $action === 'approve'
                 ? "✅ {$sname}'s account has been approved. They can now log in."
                 : "🚫 {$sname}'s registration has been rejected.";
@@ -37,11 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── Fetch pending students ─────────────────────────────────────
 $pending = mysqli_query($conn,
-    "SELECT u.user_id, u.email, u.status, s.student_id, s.name, s.uucms_number, s.batch, s.specialization, u.user_id AS uid
+    "SELECT u.user_id, u.email, u.status, s.student_id,
+            COALESCE(s.name, u.email) AS name,
+            s.uucms_number, s.batch, s.specialization, u.user_id AS uid
      FROM user u
-     JOIN student s ON s.user_id = u.user_id
+     LEFT JOIN student s ON s.user_id = u.user_id
      WHERE u.role_id = 1 AND u.status = 'Pending'
-     ORDER BY s.student_id ASC");
+     ORDER BY u.user_id ASC");
 
 $pending_count = mysqli_num_rows($pending);
 ?>
@@ -63,6 +65,9 @@ h2{color:#1b5e20;font-size:20px;margin-bottom:6px}
 .flash-ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px}
 .flash-err{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:18px}
 .badge-pending{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-incomplete{background:#fce4ec;color:#b71c1c;border:1px solid #f48fb1;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.warn-row{background:#fff8f8!important}
+.missing{color:#ccc;font-style:italic;font-size:11px}
 .empty{text-align:center;padding:50px;color:#888;font-size:14px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
@@ -138,17 +143,30 @@ tr:last-child td{border-bottom:none}
       <th>Action</th>
     </tr>
     <?php $i = 1; while ($r = mysqli_fetch_assoc($pending)): ?>
-    <tr>
+    <?php $is_orphan = empty($r['student_id']); ?>
+    <tr class="<?= $is_orphan ? 'warn-row' : '' ?>">
       <td><?= $i++ ?></td>
-      <td><span class="uucms-id"><?= htmlspecialchars($r['uucms_number'] ?? '—') ?></span></td>
+      <td>
+        <?php if (!empty($r['uucms_number'])): ?>
+          <span class="uucms-id"><?= htmlspecialchars($r['uucms_number']) ?></span>
+        <?php else: ?>
+          <span class="missing">not saved</span>
+        <?php endif; ?>
+      </td>
       <td><strong><?= htmlspecialchars($r['name']) ?></strong></td>
       <td style="font-size:11px;color:#666"><?= htmlspecialchars($r['email']) ?></td>
-      <td><?= htmlspecialchars($r['batch'] ?? '—') ?></td>
-      <td><?= htmlspecialchars($r['specialization'] ?? '—') ?></td>
-      <td><span class="badge-pending">⏳ Pending</span></td>
+      <td><?= !empty($r['batch']) ? htmlspecialchars($r['batch']) : '<span class="missing">not saved</span>' ?></td>
+      <td><?= !empty($r['specialization']) ? htmlspecialchars($r['specialization']) : '<span class="missing">not saved</span>' ?></td>
+      <td>
+        <?php if ($is_orphan): ?>
+          <span class="badge-incomplete">⚠ Incomplete — Ask to Re-Register</span>
+        <?php else: ?>
+          <span class="badge-pending">⏳ Pending</span>
+        <?php endif; ?>
+      </td>
       <td style="white-space:nowrap">
-        <button class="btn-approve" onclick="openModal(<?= $r['user_id'] ?>, '<?= htmlspecialchars(addslashes($r['name'])) ?>', 'approve')">✅ Approve</button>
-        <button class="btn-reject"  onclick="openModal(<?= $r['user_id'] ?>, '<?= htmlspecialchars(addslashes($r['name'])) ?>', 'reject')">✖ Reject</button>
+        <button class="btn-approve" onclick="openModal(<?= $r['user_id'] ?>, '<?= htmlspecialchars(addslashes($r['name'])) ?>', 'approve')">&#x2705; Approve</button>
+        <button class="btn-reject"  onclick="openModal(<?= $r['user_id'] ?>, '<?= htmlspecialchars(addslashes($r['name'])) ?>', 'reject')">&#x2716; Reject</button>
       </td>
     </tr>
     <?php endwhile; ?>
