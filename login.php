@@ -86,133 +86,101 @@ function getRoleDashboard($role_id) {
         default: return "landing.php";
     }
 }
-?><!DOCTYPE html>
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login — JSS DVH-IMSR Placement Management System">
     <title>Login — JSS DVH-IMSR PMS</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family:'Segoe UI',sans-serif;
-            background:linear-gradient(135deg,#1a237e 0%,#283593 50%,#3949ab 100%);
-            min-height:100vh; display:flex; align-items:center; justify-content:center;
-        }
-        .login-wrapper {
-            display:flex; width:860px; min-height:480px;
-            border-radius:16px; overflow:hidden;
-            box-shadow:0 20px 60px rgba(0,0,0,0.4);
-        }
-        .left-panel {
-            background:rgba(255,255,255,0.08); backdrop-filter:blur(10px);
-            width:45%; padding:48px 36px; display:flex; flex-direction:column;
-            justify-content:center; color:#fff;
-            border-right:1px solid rgba(255,255,255,0.15);
-        }
-        .left-panel h1 { font-size:22px; font-weight:700; line-height:1.4; margin-bottom:12px; }
-        .left-panel p  { font-size:13px; opacity:.75; line-height:1.6; margin-bottom:28px; }
-        .feature-list  { list-style:none; }
-        .feature-list li {
-            font-size:13px; opacity:.85; margin-bottom:10px;
-            display:flex; align-items:center; gap:10px;
-        }
-        .feature-list li::before {
-            content:"✓"; background:#42a5f5; color:#fff;
-            width:20px; height:20px; border-radius:50%;
-            display:flex; align-items:center; justify-content:center;
-            font-size:11px; flex-shrink:0;
-        }
-        .right-panel {
-            background:#fff; width:55%; padding:48px 44px;
-            display:flex; flex-direction:column; justify-content:center;
-        }
-        .logo-area { text-align:center; margin-bottom:28px; }
-        .logo-area img { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #c9a84c; margin-bottom:10px; }
-        .logo-area h2 { font-size:20px; color:#1a237e; font-weight:700; }
-        .logo-area p  { font-size:12px; color:#888; margin-top:4px; }
-        .form-group   { margin-bottom:18px; }
-        .form-group label { display:block; font-size:13px; font-weight:600; color:#444; margin-bottom:6px; }
-        .form-group input {
-            width:100%; padding:11px 14px; border:1.5px solid #ddd;
-            border-radius:8px; font-size:14px; color:#333;
-            transition:border-color .2s; outline:none;
-        }
-        .form-group input:focus { border-color:#3949ab; }
-        .error-msg {
-            background:#ffebee; color:#c62828;
-            border:1px solid #ef9a9a; border-radius:8px;
-            padding:10px 14px; font-size:13px; margin-bottom:16px;
-        }
-        .btn-login {
-            width:100%; padding:13px;
-            background:linear-gradient(135deg,#1a237e,#3949ab);
-            color:#fff; border:none; border-radius:8px;
-            font-size:15px; font-weight:600; cursor:pointer; transition:opacity .2s;
-        }
-        .btn-login:hover { opacity:.9; }
-        .register-links { margin-top:16px; text-align:center; font-size:13px; color:#666; }
-        .register-links a { color:#3949ab; text-decoration:none; font-weight:600; }
-        .register-links a:hover { text-decoration:underline; }
-        .divider { border:none; border-top:1px solid #eee; margin:18px 0 14px; }
-        .back-home { text-align:center; margin-top:10px; font-size:13px; }
-        .back-home a { color:#888; text-decoration:none; font-size:12px; }
-        .back-home a:hover { color:#3949ab; }
-        @media(max-width:700px) {
-            body { padding:0; align-items:flex-start; }
-            .login-wrapper { flex-direction:column; width:100%; min-height:100vh; border-radius:0; box-shadow:none; }
-            .left-panel { display:none; }
-            .right-panel { width:100%; padding:48px 28px 36px; min-height:100vh; }
-            .btn-login { font-size:16px; padding:14px; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/pms-theme.css">
 </head>
 <body>
-<div class="login-wrapper">
-    <div class="left-panel">
-        <h1>JSS DVH-IMSR Placement Management System</h1>
-        <p>JSS DVH-IMSR College, Vidyagiri, Dharwad</p>
-        <ul class="feature-list">
-            <li>Student profile &amp; pre-placement tracking</li>
-            <li>Auto eligibility checking for drives</li>
-            <li>Resume ATS score evaluation</li>
-            <li>Real-time job notifications</li>
-            <li>Alumni job recommendations</li>
-            <li>Analytics &amp; placement reports</li>
-        </ul>
+<div class="auth-page-bg">
+  <div class="auth-split-card">
+
+    <!-- Left branding panel -->
+    <div class="auth-split-left">
+      <div style="margin-bottom:28px">
+        <img src="assets/logo.jpg" alt="JSS DVH-IMSR"
+             style="width:52px;height:52px;border-radius:50%;object-fit:cover;
+                    border:2px solid rgba(201,168,76,.4);background:#fff;margin-bottom:16px"
+             onerror="this.style.display='none'">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;
+                    color:#fff;line-height:1.25">JSS DVH-IMSR<br>Placement Portal</div>
+        <p class="split-sub" style="margin-top:8px">JSS DVH-IMSR College, Vidyagiri, Dharwad</p>
+      </div>
+      <ul class="split-feature-list">
+        <li><span class="chk">✓</span> Student profile &amp; pre-placement tracking</li>
+        <li><span class="chk">✓</span> Auto eligibility checking for drives</li>
+        <li><span class="chk">✓</span> Resume ATS score evaluation</li>
+        <li><span class="chk">✓</span> Real-time job notifications</li>
+        <li><span class="chk">✓</span> Alumni job recommendations</li>
+        <li><span class="chk">✓</span> Analytics &amp; placement reports</li>
+      </ul>
     </div>
-    <div class="right-panel">
-        <div class="logo-area">
-            <img src="assets/logo.jpg" alt="JSS Logo" onerror="this.style.display='none'">
-            <h2>🎓 PMS Login</h2>
-            <p>Sign in to your account</p>
+
+    <!-- Right form panel -->
+    <div class="auth-split-right">
+      <div class="auth-logo-wrap">
+        <img src="assets/logo.jpg" alt="JSS Logo" class="auth-logo-img"
+             onerror="this.style.display='none'">
+        <span class="auth-role-badge">🎓 Placement Portal Login</span>
+      </div>
+
+      <h1 class="auth-title" style="font-size:26px">Welcome Back</h1>
+      <p class="auth-sub">Sign in to your PMS account</p>
+
+      <?php if ($error): ?>
+        <div class="alert-error">⚠ <?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
+
+      <form method="POST" action="login.php">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+
+        <div class="form-group-sm">
+          <label class="form-label-sm" for="email">Email Address</label>
+          <input type="email" id="email" name="email" class="form-ctrl"
+                 placeholder="your@email.com"
+                 value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
         </div>
-        <?php if ($error): ?>
-            <div class="error-msg">⚠ <?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-        <form method="POST" action="login.php">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" placeholder="Enter your email"
-                       value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
-            </div>
-            <button type="submit" class="btn-login">Login →</button>
-        </form>
-        <hr class="divider">
-        <div class="register-links">
-            New student? <a href="student/register.php">Register here</a>
-            &nbsp;|&nbsp;
-            Alumni? <a href="alumni/register.php">Register here</a>
+
+        <div class="form-group-sm" style="margin-bottom:24px">
+          <label class="form-label-sm" for="password">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="password" name="password" class="form-ctrl"
+                   placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="pw-toggle" onclick="togglePw()" tabindex="-1">👁</button>
+          </div>
         </div>
-        <div class="back-home">
-            <a href="landing.php">← Back to Home</a>
-        </div>
+
+        <button type="submit" class="btn-gold"
+                style="width:100%;justify-content:center;padding:13px;font-size:15px">
+          Sign In →
+        </button>
+      </form>
+
+      <div class="auth-link-row" style="margin-top:20px">
+        New student? <a href="student/register.php">Register here</a>
+        &nbsp;|&nbsp;
+        Alumni? <a href="alumni/register.php">Register here</a>
+      </div>
+      <div class="auth-link-row" style="margin-top:10px">
+        <a href="landing.php" style="color:var(--text-muted);font-weight:400;font-size:12px">← Back to Home</a>
+      </div>
     </div>
+
+  </div>
 </div>
+
+<script>
+function togglePw() {
+    const inp = document.getElementById('password');
+    const btn = document.querySelector('.pw-toggle');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+</script>
 </body>
 </html>
