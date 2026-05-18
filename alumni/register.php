@@ -192,6 +192,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
+        <button type="submit" class="btn-gold" style="width:100%;justify-content:center;padding:13px;font-size:15px;margin-top:8px">Register →</button>
+    </form>
+    <?php endif; ?>
+    <div class="login-link">Already have an account? <a href="../login.php">Login</a></div>
+
+<script>
+const colors = ['#ef5350','#ff9800','#ffeb3b','#4caf50'];
+const labels = ['Weak','Fair','Good','Strong'];
+function checkPw() {
+    const v = document.getElementById('pw').value;
+    const reqs = {
+        len:   v.length >= 8,
+        upper: /[A-Z]/.test(v),
+        lower: /[a-z]/.test(v),
+        digit: /[0-9]/.test(v),
+        sym:   /[\W_]/.test(v)
+    };
+    document.getElementById('r-len').classList.toggle('ok', reqs.len);
+    document.getElementById('r-upper').classList.toggle('ok', reqs.upper);
+    document.getElementById('r-lower').classList.toggle('ok', reqs.lower);
+    document.getElementById('r-digit').classList.toggle('ok', reqs.digit);
+    document.getElementById('r-sym').classList.toggle('ok', reqs.sym);
+    const score = Object.values(reqs).filter(Boolean).length - 1;
+    ['sb1','sb2','sb3','sb4'].forEach((id,i) => {
+        document.getElementById(id).style.background = (v.length===0) ? '#e0e0e0' : (i<=score ? colors[Math.min(score,3)] : '#e0e0e0');
+    });
+    const lbl = document.getElementById('slabel');
+    if (v.length===0) { lbl.textContent=''; lbl.style.color=''; }
+    else { lbl.textContent=labels[Math.min(score,3)]; lbl.style.color=colors[Math.min(score,3)]; }
+    checkMatch();
+}
+function checkMatch() {
+    const v1=document.getElementById('pw').value;
+    const v2=document.getElementById('pw2').value;
+    const ml=document.getElementById('matchlabel');
+    if (!v2) { ml.textContent=''; return; }
+    ml.textContent = v1===v2 ? '✓ Passwords match' : '✗ Passwords do not match';
+    ml.style.color = v1===v2 ? '#2e7d32' : '#c62828';
+}
+function togglePw(id, btn) {
+    const inp=document.getElementById(id);
+    inp.type = inp.type==='password' ? 'text' : 'password';
+    btn.textContent = inp.type==='password' ? '👁' : '🙈';
+}
+document.getElementById('pw').addEventListener('input', checkPw);
+document.getElementById('pw2').addEventListener('input', checkMatch);
+document.querySelector('form').addEventListener('submit', function(e) {
+    const v = document.getElementById('pw').value;
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(v)) {
+        e.preventDefault();
+        alert('Password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.');
+    } else if (v !== document.getElementById('pw2').value) {
+        e.preventDefault();
+        alert('Passwords do not match.');
+    }
+});
+</script>
+  </div>
+</div>
+</div>
 </body>
 
 </html>

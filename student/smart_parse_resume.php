@@ -1,7 +1,7 @@
 <?php
 // =============================================================
 //  student/smart_parse_resume.php
-//  SMART RESUME PARSER — Gemini first, local fallback second.
+//  SMART RESUME PARSER — Groq first, local fallback second.
 //  Fixed: htmlspecialchars corruption, JSON mode, model upgrade.
 // =============================================================
 
@@ -19,7 +19,7 @@ $debugMode = isset($_GET['debug']) && $_GET['debug'] === '1';
 $debugLog = [];
 
 // ── Groq config (free tier — sign up at console.groq.com) ────
-$groqApiKey = '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';  // ← paste your key
+$groqApiKey = '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';
 $groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
 $groqModel = 'llama-3.3-70b-versatile'; // free, fast, accurate
 
@@ -52,7 +52,7 @@ if ($pdfContent === false) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STEP 1 — Extract PDF text locally (saves Gemini token quota)
+//  STEP 1 — Extract PDF text locally (saves  token quota)
 // ═══════════════════════════════════════════════════════════════
 $pdfTextForGemini = '';
 

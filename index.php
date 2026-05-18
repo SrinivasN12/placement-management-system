@@ -13,12 +13,9 @@ if (isset($_SESSION['user_id'])) {
     header("Location: " . getRoleDashboard($_SESSION['role_id']));
     exit();
 }
-
-// Redirect unauthenticated GET visitors to the landing page
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: landing.php');
-    exit();
-}
+// index.php → root URL redirect to landing page
+header('Location: landing.php');
+exit();
 
 $error = "";
 
@@ -150,21 +147,12 @@ function getRoleDashboard($role_id) {
           <input type="password" id="password" name="password" class="form-ctrl"
                  placeholder="Enter your password" required>
         </div>
-        <button type="submit" class="btn-gold" style="width:100%;justify-content:center;padding:14px;font-size:15px">
-          Login →
-        </button>
-      </form>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:22px 0 16px">
-      <div class="auth-link-row">
-        New student? <a href="student/register.php">Register here</a>
-        &nbsp;|&nbsp;
-        Alumni? <a href="alumni/register.php">Register here</a>
-      </div>
-      <p style="text-align:center;font-size:11.5px;color:var(--text-muted);margin-top:12px">
-        🔑 Test accounts — Password: <strong>password123</strong><br>
-        student@pms.com &nbsp;|&nbsp; officer@pms.com &nbsp;|&nbsp; alumni@pms.com
-      </p>
+        <div class="register-links" style="margin-top:10px">
+            <a href="landing.php">← Back to Home</a>
+        </div>
+        <p class="hint">🔑 Test accounts — Password: <strong>password123</strong><br>
+            student@pms.com &nbsp;|&nbsp; officer@pms.com &nbsp;|&nbsp; alumni@pms.com
+        </p>
     </div>
 
   </div>

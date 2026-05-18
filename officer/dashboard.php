@@ -186,6 +186,7 @@ $pending_approvals = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) c F
             <a class="module-btn" href="applications.php">📝 View Applications</a>
             <!-- <a class="module-btn" href="selection.php">✅ Update Selection Status</a> -->
             <a class="module-btn" href="reports.php">📊 Analytics &amp; Reports</a>
+            <a class="module-btn" href="mock_test_analytics.php">🎯 Mock Test Analytics</a>
             <a class="module-btn" href="notify.php">🔔 Send Notifications</a>
             <a class="module-btn" href="preplacement.php">📋 Pre-Placement Evaluation</a>
         </div>
