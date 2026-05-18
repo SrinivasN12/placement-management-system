@@ -7,6 +7,7 @@ if (isset($_SESSION['user_id'])) {
   header('Location:' . ($rd[$_SESSION['role_id']] ?? 'login.php'));
   exit;
 }
+if(empty($_SESSION['csrf_token'])){$_SESSION['csrf_token']=bin2hex(random_bytes(32));}
 ?><!DOCTYPE html>
 <html lang="en">
 
