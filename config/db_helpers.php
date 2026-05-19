@@ -47,8 +47,18 @@ function mbaSpecializations(): array {
     return ['Finance', 'Marketing', 'HR', 'Operations', 'IT', 'General'];
 }
 
-/** MBA batch options */
+/**
+ * MBA batch options — auto-generated each year.
+ * Shows 2 past batches, the current batch, and 2 upcoming batches
+ * based on the current calendar year (2-year MBA programme).
+ */
 function mbaBatches(): array {
-    return ['2022-24', '2023-25', '2024-26', '2025-27', '2026-28'];
+    $currentYear = (int)date('Y');
+    $batches = [];
+    // Window: 2 years back to 2 years ahead
+    for ($start = $currentYear - 2; $start <= $currentYear + 2; $start++) {
+        $batches[] = $start . '-' . ($start + 2);
+    }
+    return $batches;
 }
 ?>

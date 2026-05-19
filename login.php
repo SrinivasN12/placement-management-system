@@ -39,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user && password_verify($password, $user['password'])) {
                 if ($user['status'] === 'Pending') {
-                    $error = "⏳ Your registration is pending approval by the Placement Officer. Please wait for confirmation.";
+                    $error = "⏳ Your registration is pending approval from the Placement Officer. Please wait for confirmation.";
+                } elseif ($user['status'] === 'Rejected') {
+                    $error = "🚫 Your registration has been rejected by the Placement Officer. Please contact the placement cell for further assistance.";
                 } elseif ($user['status'] !== 'Active') {
                     $error = "Your account is inactive. Contact the administrator.";
                 } else {
@@ -83,7 +85,7 @@ function getRoleDashboard($role_id) {
         case 1: return "student/dashboard.php";
         case 2: return "officer/dashboard.php";
         case 3: return "alumni/dashboard.php";
-        default: return "landing.php";
+        default: return "index.php";
     }
 }
 ?>
@@ -167,7 +169,7 @@ function getRoleDashboard($role_id) {
         Alumni? <a href="alumni/register.php">Register here</a>
       </div>
       <div class="auth-link-row" style="margin-top:10px">
-        <a href="landing.php" style="color:var(--text-muted);font-weight:400;font-size:12px">← Back to Home</a>
+        <a href="index.php" style="color:var(--text-muted);font-weight:400;font-size:12px">← Back to Home</a>
       </div>
     </div>
 
