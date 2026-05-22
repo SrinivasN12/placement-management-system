@@ -73,14 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!password_verify($cur, $u['password'])) {
             $error = "Current password is incorrect.";
-        } elseif (strlen($new) < 6) {
-            $error = "New password must be at least 6 characters.";
+        } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $new)) {
+            $error = "New password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.";
         } elseif ($new !== $conf) {
             $error = "New passwords do not match.";
         } else {
             $hash = password_hash($new, PASSWORD_DEFAULT);
-            $esc  = mysqli_real_escape_string($conn, $hash);
-            mysqli_query($conn, "UPDATE user SET password='$esc' WHERE user_id=$user_id");
+            $stmt_u = mysqli_prepare($conn, "UPDATE user SET password=? WHERE user_id=?");
+            mysqli_stmt_bind_param($stmt_u, "si", $hash, $user_id);
+            mysqli_stmt_execute($stmt_u);
+            mysqli_stmt_close($stmt_u);
             $success = "Password changed successfully!";
         }
     }
@@ -359,20 +361,37 @@ require_once '_nav.php';
                     <label class="form-label fw-semibold small">
                       <i class="bi bi-lock me-1 text-success"></i>New Password
                     </label>
-                    <input type="password" class="form-control" name="new_password" id="newPwd"
-                           placeholder="Min 6 characters" required minlength="6"
-                           oninput="updateStrength(this.value)">
+                    <div class="input-group">
+                      <input type="password" class="form-control" name="new_password" id="newPwd"
+                             placeholder="Min 8 characters" required minlength="8"
+                             oninput="updateStrength(this.value)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="togglePw('newPwd', this)">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
                     <div id="strengthBar" class="mt-2"></div>
-                    <small class="text-muted" id="strengthTxt"></small>
+                    <small class="text-muted d-block mt-1" id="strengthTxt"></small>
+                    <ul class="list-unstyled mt-2 ps-0" id="reqs" style="font-size: 0.75rem;">
+                      <li id="r-len" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> At least 8 characters</li>
+                      <li id="r-upper" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One uppercase letter (A–Z)</li>
+                      <li id="r-lower" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One lowercase letter (a–z)</li>
+                      <li id="r-digit" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One digit (0–9)</li>
+                      <li id="r-sym" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One special character (!@#$…)</li>
+                    </ul>
                   </div>
                   <div class="col-12 col-sm-6">
                     <label class="form-label fw-semibold small">
                       <i class="bi bi-lock-fill me-1 text-success"></i>Confirm New Password
                     </label>
-                    <input type="password" class="form-control" name="confirm_password"
-                           placeholder="Repeat new password" required minlength="6"
-                           oninput="checkMatch(this.value)">
-                    <small id="matchTxt"></small>
+                    <div class="input-group">
+                      <input type="password" class="form-control" name="confirm_password" id="confirmPwd"
+                             placeholder="Repeat new password" required minlength="8"
+                             oninput="checkMatch(this.value)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="togglePw('confirmPwd', this)">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                    <small class="d-block mt-1" id="matchTxt"></small>
                   </div>
                 </div>
 
@@ -394,25 +413,57 @@ require_once '_nav.php';
 function updateStrength(pw) {
   const bar = document.getElementById('strengthBar');
   const txt = document.getElementById('strengthTxt');
-  let score = 0;
-  if (pw.length >= 6)  score++;
-  if (pw.length >= 10) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  
+  const reqs = {
+    len: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    digit: /[0-9]/.test(pw),
+    sym: /[\W_]/.test(pw)
+  };
+  
+  const updateReq = (id, met) => {
+    const li = document.getElementById(id);
+    if (!li) return;
+    const icon = li.querySelector('i');
+    if (met) {
+      li.className = 'text-success fw-semibold';
+      if (icon) {
+        icon.className = 'bi bi-check-circle-fill text-success me-1';
+      }
+    } else {
+      li.className = 'text-muted';
+      if (icon) {
+        icon.className = 'bi bi-x-circle-fill text-danger me-1';
+      }
+    }
+  };
+  
+  updateReq('r-len', reqs.len);
+  updateReq('r-upper', reqs.upper);
+  updateReq('r-lower', reqs.lower);
+  updateReq('r-digit', reqs.digit);
+  updateReq('r-sym', reqs.sym);
+  
+  const score = Object.values(reqs).filter(Boolean).length; // 0..5
   const levels = [
+    {w:'0%', bg:'#e0e0e0', t:''},
     {w:'20%', bg:'#ef5350', t:'Very weak'},
     {w:'40%', bg:'#ff7043', t:'Weak'},
     {w:'60%', bg:'#ffa726', t:'Fair'},
     {w:'80%', bg:'#66bb6a', t:'Strong'},
-    {w:'100%',bg:'#2e7d32', t:'Very strong'},
+    {w:'100%', bg:'#2e7d32', t:'Very strong'},
   ];
-  const l = levels[Math.min(score, 4)];
+  
+  const l = levels[pw ? score : 0];
   bar.style.width = pw ? l.w : '0';
   bar.style.background = l.bg;
   txt.textContent = pw ? l.t : '';
   txt.style.color = l.bg;
+  
+  checkMatch(document.getElementById('confirmPwd').value);
 }
+
 function checkMatch(val) {
   const orig = document.getElementById('newPwd').value;
   const txt  = document.getElementById('matchTxt');
@@ -425,6 +476,45 @@ function checkMatch(val) {
     txt.style.color = '#c62828';
   }
 }
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (icon) {
+      icon.className = 'bi bi-eye-slash';
+    }
+  } else {
+    inp.type = 'password';
+    if (icon) {
+      icon.className = 'bi bi-eye';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const pwdFormInput = document.querySelector('form input[name="action"][value="password"]');
+  if (pwdFormInput) {
+    const pwdForm = pwdFormInput.closest('form');
+    if (pwdForm) {
+      pwdForm.addEventListener('submit', function(e) {
+        const pw = document.getElementById('newPwd').value;
+        const conf = document.getElementById('confirmPwd').value;
+        
+        const complexRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!complexRegex.test(pw)) {
+          e.preventDefault();
+          alert('New password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.');
+        } else if (pw !== conf) {
+          e.preventDefault();
+          alert('Confirm password must match the new password.');
+        }
+      });
+    }
+  }
+});
 </script>
 </body>
 </html>

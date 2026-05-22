@@ -19,10 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ask'])) {
   $body = trim($_POST['body']);
   $tags = trim($_POST['tags']);
 
-  if (strlen($title) < 10) {
-    $error = "Title must be at least 10 characters.";
-  } elseif (strlen($body) < 20) {
-    $error = "Please describe your question in more detail (min 20 chars).";
+  if (strlen($title) < 6) {
+    $error = "Title must be at least 6 characters.";
+  } elseif (strlen($body) < 10) {
+    $error = "Please describe your question in more detail (min 10 chars).";
+
   } else {
     $stmt = mysqli_prepare(
       $conn,
@@ -534,16 +535,18 @@ require '_layout.php';
         <input type="hidden" name="ask" value="1">
         <div class="form-group">
           <label>Question Title *</label>
-          <input type="text" name="title" placeholder="e.g. How do I prepare for a finance interview?" maxlength="300"
+          <input type="text" name="title" minlength="6" placeholder="e.g. How do I prepare for a finance interview?" maxlength="300"
             required>
-          <p class="hint">Be specific and clear. Min 10 characters.</p>
+          <p class="hint">Be specific and clear. Min 6 characters.</p>
         </div>
         <div class="form-group">
           <label>Details *</label>
-          <textarea name="body"
+          <textarea name="body" minlength="10"
             placeholder="Describe your question in detail — what have you tried, what are you unsure about, your current situation…"
             required></textarea>
+          <p class="hint">Please describe your question in more detail (min 10 characters).</p>
         </div>
+
         <div class="form-group">
           <label>Tags <span style="font-weight:400;color:#aaa">(optional, comma-separated)</span></label>
           <input type="text" name="tags" placeholder="e.g. Finance, Interview, Resume">

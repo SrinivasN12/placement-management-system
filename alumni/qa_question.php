@@ -419,7 +419,7 @@ textarea {
           <input type="hidden" name="edit_id" value="<?= $editing['answer_id'] ?>">
         <?php endif; ?>
         
-        <textarea name="body" id="ansBody" maxlength="3000" required
+        <textarea name="body" id="ansBody" minlength="20" maxlength="3000" required
           oninput="document.getElementById('ansCC').textContent=this.value.length+'/3000'"
           placeholder="Share your industry experience, guidelines, or placement preparation advice. Be helpful, constructive and clear! Min 20 characters."><?= htmlspecialchars($editing['body'] ?? '') ?></textarea>
         <div class="char-count"><span id="ansCC"><?= strlen($editing['body'] ?? '') ?></span>/3000</div>
