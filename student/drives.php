@@ -28,51 +28,50 @@ $drives_closed = mysqli_query($conn,
 
 $today = date('Y-m-d');
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Placement Drives — MBA PMS</title>
+<?php
+$pageTitle  = 'Placement Drives';
+$activePage = 'drives';
+require '_layout.php';
+?>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
-.navbar{background:#1a237e;color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.navbar h1{font-size:18px}.navbar a{color:#fff;text-decoration:none;font-size:13px}
-.content{padding:32px;max-width:1100px;margin:0 auto}
-h2{color:#1a237e;margin-bottom:6px;font-size:20px}
-.sub{color:#666;font-size:13px;margin-bottom:24px}
-.back{display:inline-block;margin-bottom:18px;color:#1a237e;text-decoration:none;font-size:13px;font-weight:600}
-.drive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:18px}
-.drive-card{background:#fff;border-radius:14px;padding:22px 24px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-left:4px solid #3949ab;position:relative}
+.drive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:18px}
+.drive-card{background:var(--surface);border-radius:var(--card-radius);padding:22px 24px;box-shadow:var(--card-shadow);border-left:4px solid var(--primary-light);position:relative;transition:transform var(--transition),box-shadow var(--transition)}
+.drive-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,35,126,.14)}
 .drive-card.closed{border-left-color:#bbb;opacity:.85}
-.drive-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-.job-title{font-size:16px;font-weight:700;color:#1a237e}
-.company{font-size:13px;color:#555;margin-top:2px}
-.badge-open{background:#e8f5e9;color:#2e7d32;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
-.badge-soon{background:#fff3e0;color:#e65100;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.drive-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px}
+.drive-header-left{display:flex;align-items:flex-start;gap:12px}
+.company-avatar{width:42px;height:42px;border-radius:10px;background:var(--accent-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0}
+.job-title{font-size:15px;font-weight:700;color:var(--text)}
+.company{font-size:13px;color:var(--muted);margin-top:2px}
+.badge-open{background:#e3f2fd;color:#1565c0;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-soon{background:var(--warn-bg);color:var(--warn);padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
 .badge-closed{background:#f5f5f5;color:#888;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
-.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:10px 0;font-size:12px;color:#555}
-.meta-grid .key{font-weight:600;color:#333}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:10px 0;font-size:12px;color:var(--muted)}
+.meta-grid .key{font-weight:600;color:var(--text)}
 .last-date{font-size:12px;font-weight:600;margin-top:8px;padding:6px 10px;border-radius:6px;display:inline-block}
-.last-date.normal{background:#e8eaf6;color:#1a237e}
-.last-date.urgent{background:#ffebee;color:#c62828;animation:pulse .8s infinite alternate}
+.last-date.normal{background:var(--accent-soft);color:var(--primary)}
+.last-date.urgent{background:var(--danger-bg);color:var(--danger);animation:pulse .8s infinite alternate}
 @keyframes pulse{from{opacity:1}to{opacity:.7}}
 .actions{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
 .elig-badge{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600}
-.eligible{background:#e8f5e9;color:#2e7d32}
-.not-eligible{background:#ffebee;color:#c62828}
-.btn-apply{background:#1a237e;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-apply:hover{background:#3949ab}
-.btn-applied{background:#e8f5e9;color:#2e7d32;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default}
-.btn-closed{background:#f5f5f5;color:#888;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default}
-.btn-mock-test{background:linear-gradient(135deg,#185FA5,#1a73e8);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.eligible{background:var(--success-bg);color:var(--success)}
+.not-eligible{background:var(--danger-bg);color:var(--danger)}
+.btn-apply{background:var(--primary);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background var(--transition)}
+.btn-apply:hover{background:var(--primary-light)}
+.btn-applied{background:var(--success-bg);color:var(--success);border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default;font-family:inherit}
+.btn-closed{background:#f5f5f5;color:#888;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:default;font-family:inherit}
+.btn-mock-test{background:linear-gradient(135deg,#185FA5,#1a73e8);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s;font-family:inherit}
 .btn-mock-test:hover{opacity:.88}
-.desc{font-size:13px;color:#666;margin:8px 0;line-height:1.5}
-.empty{text-align:center;padding:60px;background:#fff;border-radius:14px;color:#888}
+.desc{font-size:13px;color:var(--muted);margin:8px 0;line-height:1.5}
+.empty{text-align:center;padding:60px;background:var(--surface);border-radius:var(--card-radius);box-shadow:var(--card-shadow);color:var(--muted)}
 .apply-result{margin-top:10px;font-size:13px;line-height:1.6;border-radius:8px;padding:0}
-.apply-result.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:10px 14px}
-.apply-result.fail{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;padding:10px 14px}
+.apply-result.ok{background:var(--success-bg);color:var(--success);border:1px solid #a5d6a7;padding:10px 14px}
+.apply-result.fail{background:var(--danger-bg);color:var(--danger);border:1px solid #ef9a9a;padding:10px 14px}
 
 /* ── Modal ──────────────────────────────────────────────────── */
-#ccModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:center;justify-content:center;padding:16px}
+#ccModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
 #ccModal.open{display:flex}
-.modal-box{background:#fff;border-radius:16px;padding:0;max-width:520px;width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.28)}
+.modal-box{background:#fff;border-radius:16px;padding:0;max-width:520px;width:100%;max-height:calc(100vh - 48px);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 56px rgba(0,0,0,.32);animation:modalSlideIn .25s cubic-bezier(.4,0,.2,1)}
 .modal-head{background:linear-gradient(135deg,#1a237e,#3949ab);color:#fff;padding:20px 24px}
 .modal-head h3{font-size:16px;font-weight:700}
 .modal-head p{font-size:12px;opacity:.8;margin-top:4px}
@@ -104,13 +103,13 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
   .modal-box{max-height:95vh;}
 }
 .hidden{display:none}
+@media(max-width:640px){.drive-grid{grid-template-columns:1fr}.meta-grid{grid-template-columns:1fr}.actions{flex-direction:column;align-items:flex-start}}
+.hidden{display:none}
 </style>
-</head><body>
-<div class="navbar"><h1>🎓 PMS — Student Portal</h1><a href="../logout.php">Logout</a></div>
-<div class="content">
-<a class="back" href="dashboard.php">← Back to Dashboard</a>
-<h2>🏢 Placement Drives</h2>
-<p class="sub">All active MBA placement opportunities. Check eligibility and apply before the last date.</p>
+<div class="page-header">
+  <h1>🏢 Placement Drives</h1>
+  <p>All active MBA placement opportunities. Check eligibility and apply before the last date.</p>
+</div>
 
 <?php
 // ── Active Drives ─────────────────────────────────────────────
@@ -138,9 +137,12 @@ $hasActive = false;
 ?>
 <div class="drive-card" id="card-<?= $did ?>">
   <div class="drive-header">
-    <div>
-      <div class="job-title"><?= htmlspecialchars($d['job_title']) ?></div>
-      <div class="company">🏢 <?= htmlspecialchars($d['company_name']) ?></div>
+    <div class="drive-header-left">
+      <div class="company-avatar"><?= strtoupper(substr($d['company_name'],0,1)) ?></div>
+      <div>
+        <div class="job-title"><?= htmlspecialchars($d['job_title']) ?></div>
+        <div class="company"><?= htmlspecialchars($d['company_name']) ?></div>
+      </div>
     </div>
     <span class="<?= $bdgClass ?>"><?= $status ?></span>
   </div>
@@ -219,9 +221,12 @@ if ($closedRows):
   ?>
   <div class="drive-card closed">
     <div class="drive-header">
-      <div>
-        <div class="job-title"><?= htmlspecialchars($d['job_title']) ?></div>
-        <div class="company">🏢 <?= htmlspecialchars($d['company_name']) ?></div>
+      <div class="drive-header-left">
+        <div class="company-avatar" style="opacity:.6"><?= strtoupper(substr($d['company_name'],0,1)) ?></div>
+        <div>
+          <div class="job-title"><?= htmlspecialchars($d['job_title']) ?></div>
+          <div class="company"><?= htmlspecialchars($d['company_name']) ?></div>
+        </div>
       </div>
       <span class="badge-closed">Closed</span>
     </div>
@@ -243,7 +248,6 @@ if ($closedRows):
   </div>
 </div>
 <?php endif; ?>
-</div><!-- /content -->
 
 <!-- ════════════════════════════════════════════════════════════
      CUSTOM CRITERIA MODAL
@@ -450,9 +454,10 @@ document.getElementById('ccModal').addEventListener('click', function(e) {
      AI MOCK TEST MODAL
      ════════════════════════════════════════════════════════════ -->
 <style>
-#mtModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+@keyframes modalSlideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+#mtModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:3000;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
 #mtModal.open{display:flex}
-.mt-box{background:#fff;border-radius:16px;width:100%;max-width:700px;margin:auto;box-shadow:0 16px 60px rgba(0,0,0,.3);overflow:hidden;display:flex;flex-direction:column}
+.mt-box{background:#fff;border-radius:16px;width:100%;max-width:720px;margin:auto;box-shadow:0 20px 64px rgba(0,0,0,.35);overflow:hidden;display:flex;flex-direction:column;animation:modalSlideIn .28s cubic-bezier(.4,0,.2,1)}
 .mt-head{background:linear-gradient(135deg,#185FA5,#1a73e8);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
 .mt-head h3{font-size:16px;font-weight:700;margin:0}
 .mt-head-right{display:flex;align-items:center;gap:14px}
@@ -461,8 +466,8 @@ document.getElementById('ccModal').addEventListener('click', function(e) {
 @keyframes tpulse{from{opacity:1}to{opacity:.6}}
 .mt-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;opacity:.8}
 .mt-close:hover{opacity:1}
-.mt-body{padding:22px 24px;overflow-y:auto;max-height:70vh}
-.mt-foot{padding:14px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.mt-body{padding:22px 24px;overflow-y:auto;max-height:calc(100vh - 220px)}
+.mt-foot{padding:14px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;background:#fff;flex-shrink:0}
 
 /* Step: difficulty */
 .diff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
@@ -489,11 +494,11 @@ document.getElementById('ccModal').addEventListener('click', function(e) {
 .q-cat-tag{display:inline-block;font-size:10px;background:#e8f0fe;color:#185FA5;padding:2px 7px;border-radius:8px;margin-left:6px;font-weight:600}
 .q-text{font-size:14px;font-weight:600;color:#222;line-height:1.5;margin-bottom:12px}
 .q-options{display:flex;flex-direction:column;gap:7px}
-.q-opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;border:1.5px solid #e8e8e8;transition:all .15s}
+.q-opt{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border-radius:8px;border:1.5px solid #e8e8e8;transition:all .15s;user-select:none}
 .q-opt:hover{border-color:#185FA5;background:#f0f6ff}
-.q-opt input[type=radio]{margin-top:2px;accent-color:#185FA5;flex-shrink:0}
+.q-opt input[type=radio]{width:16px;height:16px;accent-color:#185FA5;flex-shrink:0;cursor:pointer;margin:0}
 .q-opt.answered{border-color:#185FA5;background:#e8f0fe}
-.q-opt label{font-size:13px;color:#333;cursor:pointer;line-height:1.4}
+.q-opt label{font-size:13px;color:#333;cursor:pointer;line-height:1.45;flex:1;margin:0}
 
 /* Step: result */
 .score-card{text-align:center;padding:20px 10px}
@@ -524,7 +529,9 @@ document.getElementById('ccModal').addEventListener('click', function(e) {
 .btn-mt-lb:hover{background:#e8f0fe}
 
 @media(max-width:640px){
-  .mt-body{padding:16px;max-height:75vh}
+  #mtModal,#ccModal{padding:12px 8px;align-items:flex-start}
+  .mt-box,.modal-box{margin:auto;max-height:calc(100vh - 24px)}
+  .mt-body{padding:16px;max-height:calc(100vh - 200px)}
   .diff-grid{grid-template-columns:1fr}
   .mt-timer{font-size:15px}
 }
@@ -668,9 +675,9 @@ function renderQuestionsStep() {
   let qHtml = '<div class="mt-progress"><div class="mt-progress-bar" id="mtProg" style="width:0%"></div></div>';
   MT.questions.forEach((q, i) => {
     const opts = q.options.map((opt, oi) =>
-      `<div class="q-opt" id="opt-${i}-${oi}" onclick="selectAnswer(${i},${oi})">
-        <input type="radio" name="q${i}" id="r${i}-${oi}" value="${oi}">
-        <label for="r${i}-${oi}">${opt}</label>
+      `<div class="q-opt ${MT.answers[i]===oi?'answered':''}" id="opt-${i}-${oi}" onclick="selectAnswer(${i},${oi})">
+        <input type="radio" name="q${i}" id="r${i}-${oi}" value="${oi}" ${MT.answers[i]===oi?'checked':''} onclick="event.stopPropagation();selectAnswer(${i},${oi})">
+        <label for="r${i}-${oi}" style="pointer-events:none">${opt}</label>
       </div>`).join('');
     qHtml += `
       <div class="q-block" id="qblock-${i}">
@@ -823,4 +830,4 @@ document.getElementById('mtModal').addEventListener('click', function(e) {
   if (e.target === this) closeMockModal();
 });
 </script>
-</body></html>
+<?php require '_layout_end.php'; ?>

@@ -159,70 +159,48 @@ function fmt_secs(int $s): string {
 $medals = ['🥇', '🥈', '🥉'];
 
 $max_dist = max(max($distribution), 1);
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mock Test Analytics — MBA PMS</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#222}
-.navbar{background:#1b5e20;color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.navbar h1{font-size:17px;font-weight:700}
-.navbar a{color:#fff;text-decoration:none;font-size:13px;opacity:.85}
-.navbar a:hover{opacity:1}
-.content{padding:28px 32px;max-width:1200px;margin:0 auto}
-.page-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
-.page-title{font-size:20px;font-weight:700;color:#1b5e20}
-.page-sub{font-size:13px;color:#666;margin-top:4px}
-.back{display:inline-block;color:#1b5e20;text-decoration:none;font-size:13px;font-weight:600;margin-bottom:16px}
 
-/* Drive selector */
+$page_title  = 'Mock Test Analytics — PMS';
+$active_page = 'mock';
+$extra_head  = '<style>
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.page-title{font-size:20px;font-weight:700;color:var(--pms-green)}
+.page-sub{font-size:13px;color:#6c757d;margin-top:4px}
 .drive-selector{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .drive-selector label{font-size:13px;font-weight:600;color:#333;white-space:nowrap}
 .drive-selector select{padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;min-width:280px}
-.drive-selector select:focus{border-color:#1b5e20}
-.btn-go{background:#1b5e20;color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-go:hover{background:#2e7d32}
-
-/* Summary cards */
+.drive-selector select:focus{border-color:var(--pms-green)}
+.btn-go{background:var(--pms-green);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-go:hover{background:var(--pms-green-mid)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
 .card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:20px;text-align:center;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
 .card-blue::before{background:#185FA5}
 .card-green::before{background:#3B6D11}
 .card-amber::before{background:#BA7517}
 .card-red::before{background:#A32D2D}
 .card-icon{font-size:26px;margin-bottom:8px}
 .card-value{font-size:28px;font-weight:800;line-height:1}
-.card-blue   .card-value{color:#185FA5}
-.card-green  .card-value{color:#3B6D11}
-.card-amber  .card-value{color:#BA7517}
-.card-red    .card-value{color:#A32D2D}
+.card-blue .card-value{color:#185FA5}
+.card-green .card-value{color:#3B6D11}
+.card-amber .card-value{color:#BA7517}
+.card-red .card-value{color:#A32D2D}
 .card-label{font-size:12px;color:#888;margin-top:6px;font-weight:500}
-
-/* Section headings */
 .section{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:20px 24px;margin-bottom:22px}
-.section-title{font-size:15px;font-weight:700;color:#1b5e20;margin-bottom:16px;display:flex;align-items:center;gap:8px;border-bottom:2px solid #e8f5e9;padding-bottom:10px}
-
-/* Leaderboard table */
+.section-title{font-size:15px;font-weight:700;color:var(--pms-green);margin-bottom:16px;display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--pms-green-pale);padding-bottom:10px}
 .lb-table{width:100%;border-collapse:collapse;font-size:13px}
-.lb-table th{background:#1b5e20;color:#fff;padding:10px 14px;text-align:left;font-weight:600;font-size:12px}
+.lb-table th{background:var(--pms-green);color:#fff;padding:10px 14px;text-align:left;font-weight:600;font-size:12px}
 .lb-table td{padding:10px 14px;border-bottom:1px solid #f0f0f0}
 .lb-table tr:last-child td{border-bottom:none}
 .lb-table tbody tr:hover td{background:#f5f8ff}
 .rank-cell{text-align:center;width:60px;font-weight:700}
 .pct-cell,.score-cell,.time-cell{text-align:center}
-.tr-gold   td{background:#fffde7}
+.tr-gold td{background:#fffde7}
 .tr-silver td{background:#f5f5f5}
 .tr-bronze td{background:#fff3e0}
 .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600}
 .badge-pass{background:#e8f5e9;color:#1b5e20}
 .badge-fail{background:#ffebee;color:#A32D2D}
-
-/* Q stats table */
 .q-table{width:100%;border-collapse:collapse;font-size:12px}
 .q-table th{background:#f5f5f5;color:#555;padding:9px 12px;text-align:left;font-weight:600;font-size:11px;border-bottom:2px solid #e0e0e0}
 .q-table td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
@@ -230,47 +208,27 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#222}
 .q-cat{display:inline-block;padding:2px 8px;border-radius:10px;background:#e8f0fe;color:#185FA5;font-size:11px;font-weight:600}
 .acc-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700}
 .q-text-col{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;font-size:12px}
-
-/* Score distribution bar chart */
 .dist-chart{display:flex;flex-direction:column;gap:10px}
 .dist-row{display:grid;grid-template-columns:80px 1fr 60px;align-items:center;gap:12px}
 .dist-label{font-size:12px;font-weight:600;color:#555;text-align:right}
 .dist-bar-bg{background:#f0f2f5;border-radius:4px;height:24px;overflow:hidden}
-.dist-bar{height:100%;border-radius:4px;background:#1b5e20;transition:width .4s;display:flex;align-items:center;padding-left:8px;color:#fff;font-size:11px;font-weight:700;min-width:2px}
+.dist-bar{height:100%;border-radius:4px;background:var(--pms-green);transition:width .4s;display:flex;align-items:center;padding-left:8px;color:#fff;font-size:11px;font-weight:700;min-width:2px}
 .dist-count{font-size:12px;font-weight:700;color:#555;text-align:center}
-
-/* Empty state */
 .empty-state{text-align:center;padding:40px;color:#999;font-size:14px}
 .no-drive{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:20px;text-align:center;color:#6d4c00;font-size:14px}
+@media(max-width:768px){.cards{grid-template-columns:1fr 1fr}.lb-table th:nth-child(3),.lb-table td:nth-child(3),.lb-table th:nth-child(7),.lb-table td:nth-child(7){display:none}}
+@media(max-width:480px){.cards{grid-template-columns:1fr}}
+</style>';
+require_once '_nav.php';
+?>
 
-@media(max-width:768px){
-  .content{padding:16px}
-  .navbar{padding:12px 16px}
-  .cards{grid-template-columns:1fr 1fr}
-  .lb-table th:nth-child(3),.lb-table td:nth-child(3),
-  .lb-table th:nth-child(7),.lb-table td:nth-child(7){display:none}
-}
-@media(max-width:480px){
-  .cards{grid-template-columns:1fr}
-}
-</style>
-</head>
-<body>
 
-<div class="navbar">
-  <h1>📊 MBA PMS — Officer Portal</h1>
-  <a href="dashboard.php">← Dashboard</a>
-</div>
-
-<div class="content">
-  <a class="back" href="dashboard.php">← Back to Dashboard</a>
-
-  <div class="page-head">
-    <div>
-      <div class="page-title">🎯 AI Mock Test Analytics</div>
-      <div class="page-sub">Review student performance on AI-generated placement mock tests.</div>
-    </div>
+<div class="page-head">
+  <div>
+    <div class="page-title">🎯 AI Mock Test Analytics</div>
+    <div class="page-sub">Review student performance on AI-generated placement mock tests.</div>
   </div>
+</div>
 
   <!-- Drive Selector -->
   <div class="drive-selector">
@@ -442,7 +400,5 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#222}
 
   <?php endif; // $summary['total'] > 0 ?>
   <?php endif; // $drive_id && $drive_info ?>
-</div>
 
-</body>
-</html>
+<?php require '_nav_end.php'; ?>
