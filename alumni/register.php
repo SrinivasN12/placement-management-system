@@ -61,7 +61,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Alumni Registration — JSS DVH-IMSR Placement Management System">
     <title>Alumni Registration — PMS</title>
-    <link rel="stylesheet" href="../assets/pms-theme.css">
+    <link rel="stylesheet" href="../assets/pms-theme.css?v=<?= time() ?>">
+    <style>
+        /* Form Validation States */
+        .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #ef5350;
+            font-weight: 500;
+            line-height: 1.4;
+            text-transform: none;
+        }
+        .form-ctrl.is-invalid ~ .invalid-feedback,
+        .pw-wrap.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+    </style>
 </head>
 
 <body>
@@ -80,32 +97,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($success): ?>
                     <div class="alert-success">✅ <?= $success ?></div><?php endif; ?>
                 <?php if (!$success): ?>
-                    <form method="POST">
+                    <form method="POST" id="registerForm" novalidate>
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                         <div class="form-group-sm">
                             <label class="form-label-sm">Full Name</label>
-                            <input type="text" name="name" class="form-ctrl" placeholder="e.g. Priya Sharma"
+                            <input type="text" id="name" name="name" class="form-ctrl" placeholder="e.g. Priya Sharma"
                                 value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required>
+                            <div class="invalid-feedback">Full name is required (minimum 3 characters, letters and spaces only).</div>
                         </div>
                         <div class="form-group-sm">
                             <label class="form-label-sm">Email Address</label>
-                            <input type="email" name="email" class="form-ctrl" placeholder="your@email.com"
+                            <input type="email" id="email" name="email" class="form-ctrl" placeholder="your@email.com"
                                 value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+                            <div class="invalid-feedback">Please enter a valid email address.</div>
                         </div>
                         <div class="form-group-sm">
                             <label class="form-label-sm">Current Company</label>
-                            <input type="text" name="company" class="form-ctrl" placeholder="e.g. Infosys"
+                            <input type="text" id="company" name="company" class="form-ctrl" placeholder="e.g. Infosys"
                                 value="<?= htmlspecialchars($_POST['company'] ?? '') ?>" required>
+                            <div class="invalid-feedback">Company name is required (minimum 2 characters).</div>
                         </div>
                         <div class="form-section-hd">Password</div>
                         <div class="form-group-sm">
                             <label class="form-label-sm">Password</label>
-                            <div class="pw-wrap">
+                            <div class="pw-wrap" id="pw-wrap">
                                 <input type="password" id="pw" name="password" class="form-ctrl"
                                     placeholder="Min 8 characters" required autocomplete="new-password">
                                 <button type="button" class="pw-toggle" onclick="togglePw('pw',this)"
                                     tabindex="-1">👁</button>
                             </div>
+                            <div class="invalid-feedback">Password must be at least 8 characters and include uppercase, lowercase, digit, and special char.</div>
                             <div class="strength-bar">
                                 <span id="sb1"></span><span id="sb2"></span>
                                 <span id="sb3"></span><span id="sb4"></span>
@@ -121,12 +142,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <div class="form-group-sm">
                             <label class="form-label-sm">Confirm Password</label>
-                            <div class="pw-wrap">
+                            <div class="pw-wrap" id="pw2-wrap">
                                 <input type="password" id="pw2" name="confirm" class="form-ctrl"
                                     placeholder="Repeat password" required autocomplete="new-password">
                                 <button type="button" class="pw-toggle" onclick="togglePw('pw2',this)"
                                     tabindex="-1">👁</button>
                             </div>
+                            <div class="invalid-feedback">Passwords do not match.</div>
                             <div class="strength-label" id="matchlabel" style="margin-top:6px"></div>
                         </div>
                         <button type="submit" class="btn-gold"
@@ -140,8 +162,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <script>
                     const colors = ['#ef5350', '#ff9800', '#ffeb3b', '#4caf50'];
                     const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+                    // Validation functions
+                    const validators = {
+                        name: (val) => val.trim().length >= 3 && /^[A-Za-z\s.]+$/.test(val),
+                        email: (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+                        company: (val) => val.trim().length >= 2,
+                        pw: (val) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(val),
+                        pw2: (val) => val === document.getElementById('pw').value
+                    };
+
+                    function validateField(inputEl, feedbackEl, validatorFn, wrapperEl = null) {
+                        const isValid = validatorFn(inputEl.value);
+                        if (isValid) {
+                            inputEl.classList.remove('is-invalid');
+                            inputEl.classList.add('is-valid');
+                            if (wrapperEl) {
+                                wrapperEl.classList.remove('is-invalid');
+                                wrapperEl.classList.add('is-valid');
+                            }
+                        } else {
+                            inputEl.classList.remove('is-valid');
+                            inputEl.classList.add('is-invalid');
+                            if (wrapperEl) {
+                                wrapperEl.classList.remove('is-valid');
+                                wrapperEl.classList.add('is-invalid');
+                            }
+                        }
+                        return isValid;
+                    }
+
+                    // Attach events to fields
+                    const nameInp = document.getElementById('name');
+                    const emailInp = document.getElementById('email');
+                    const companyInp = document.getElementById('company');
+                    const pwInp = document.getElementById('pw');
+                    const pw2Inp = document.getElementById('pw2');
+
+                    const pwWrap = document.getElementById('pw-wrap');
+                    const pw2Wrap = document.getElementById('pw2-wrap');
+
+                    nameInp.addEventListener('input', () => validateField(nameInp, null, validators.name));
+                    nameInp.addEventListener('blur', () => validateField(nameInp, null, validators.name));
+
+                    emailInp.addEventListener('input', () => validateField(emailInp, null, validators.email));
+                    emailInp.addEventListener('blur', () => validateField(emailInp, null, validators.email));
+
+                    companyInp.addEventListener('input', () => validateField(companyInp, null, validators.company));
+                    companyInp.addEventListener('blur', () => validateField(companyInp, null, validators.company));
+
                     function checkPw() {
-                        const v = document.getElementById('pw').value;
+                        const v = pwInp.value;
                         const reqs = {
                             len: v.length >= 8,
                             upper: /[A-Z]/.test(v),
@@ -161,31 +232,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const lbl = document.getElementById('slabel');
                         if (v.length === 0) { lbl.textContent = ''; lbl.style.color = ''; }
                         else { lbl.textContent = labels[Math.min(score, 3)]; lbl.style.color = colors[Math.min(score, 3)]; }
+                        
+                        validateField(pwInp, null, validators.pw, pwWrap);
                         checkMatch();
                     }
+
                     function checkMatch() {
-                        const v1 = document.getElementById('pw').value;
-                        const v2 = document.getElementById('pw2').value;
+                        const v1 = pwInp.value;
+                        const v2 = pw2Inp.value;
                         const ml = document.getElementById('matchlabel');
-                        if (!v2) { ml.textContent = ''; return; }
-                        ml.textContent = v1 === v2 ? '✓ Passwords match' : '✗ Passwords do not match';
-                        ml.style.color = v1 === v2 ? '#2e7d32' : '#c62828';
+                        if (!v2) {
+                            ml.textContent = '';
+                            pw2Inp.classList.remove('is-invalid', 'is-valid');
+                            pw2Wrap.classList.remove('is-invalid', 'is-valid');
+                            return;
+                        }
+                        if (v1 === v2) {
+                            ml.textContent = '✓ Passwords match';
+                            ml.style.color = '#2e7d32';
+                            pw2Inp.classList.remove('is-invalid');
+                            pw2Inp.classList.add('is-valid');
+                            pw2Wrap.classList.remove('is-invalid');
+                            pw2Wrap.classList.add('is-valid');
+                        } else {
+                            ml.textContent = '✗ Passwords do not match';
+                            ml.style.color = '#c62828';
+                            pw2Inp.classList.remove('is-valid');
+                            pw2Inp.classList.add('is-invalid');
+                            pw2Wrap.classList.remove('is-valid');
+                            pw2Wrap.classList.add('is-invalid');
+                        }
                     }
+
                     function togglePw(id, btn) {
                         const inp = document.getElementById(id);
                         inp.type = inp.type === 'password' ? 'text' : 'password';
                         btn.textContent = inp.type === 'password' ? '👁' : '🙈';
                     }
-                    document.getElementById('pw').addEventListener('input', checkPw);
-                    document.getElementById('pw2').addEventListener('input', checkMatch);
-                    document.querySelector('form').addEventListener('submit', function (e) {
-                        const v = document.getElementById('pw').value;
-                        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(v)) {
+
+                    pwInp.addEventListener('input', checkPw);
+                    pw2Inp.addEventListener('input', checkMatch);
+
+                    document.getElementById('registerForm').addEventListener('submit', function (e) {
+                        const isNameValid = validateField(nameInp, null, validators.name);
+                        const isEmailValid = validateField(emailInp, null, validators.email);
+                        const isCompanyValid = validateField(companyInp, null, validators.company);
+                        const isPwValid = validateField(pwInp, null, validators.pw, pwWrap);
+                        
+                        checkMatch();
+                        const isPw2Valid = (pwInp.value === pw2Inp.value) && (pw2Inp.value !== '');
+                        if (!isPw2Valid) {
+                            pw2Inp.classList.add('is-invalid');
+                            pw2Wrap.classList.add('is-invalid');
+                        }
+
+                        if (!isNameValid || !isEmailValid || !isCompanyValid || !isPwValid || !isPw2Valid) {
                             e.preventDefault();
-                            alert('Password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.');
-                        } else if (v !== document.getElementById('pw2').value) {
-                            e.preventDefault();
-                            alert('Passwords do not match.');
+                            
+                            // Focus first invalid input
+                            const firstInvalid = document.querySelector('.form-ctrl.is-invalid');
+                            if (firstInvalid) {
+                                firstInvalid.focus();
+                            }
                         }
                     });
                 </script>
