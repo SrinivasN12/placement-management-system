@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_bind_param($s2, "iss", $uid, $name, $company);
             mysqli_stmt_execute($s2);
             mysqli_stmt_close($s2);
-            $success = "Registration successful! <a href='../index.php'>Login here</a>";
+            $success = "Registration successful! <a href='../login.php'>Login here</a>";
         }
         mysqli_stmt_close($chk);
     }
@@ -156,8 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             →</button>
                     </form>
                 <?php endif; ?>
-                <div class="auth-link-row" style="margin-top:18px">Already have an account ? <a
-                        href="../landing.php">Login</a></div>
+                <div class="auth-link-row" style="margin-top:18px">Already have an account? <a href="../login.php">Login</a></div>
 
                 <script>
                     const colors = ['#ef5350', '#ff9800', '#ffeb3b', '#4caf50'];
