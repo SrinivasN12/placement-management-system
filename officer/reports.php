@@ -161,787 +161,126 @@ $js_company_names = json_encode($company_names);
 $js_company_counts = json_encode($company_counts);
 // trend data removed — replaced by insights panel
 $js_cgpa = json_encode(array_values($cgpa));
+
+$page_title  = 'Analytics & Reports — PMS';
+$active_page = 'reports';
+$extra_head  = '
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --green: #1b5e20; --green-mid: #2e7d32; --green-light: #e8f5e9;
+  --blue: #1e40af; --blue-light: #dbeafe;
+  --amber: #b45309; --amber-light: #fef3c7;
+  --red: #be123c; --red-light: #ffe4e6;
+  --purple: #6d28d9; --purple-light: #ede9fe;
+  --teal: #0f766e; --teal-light: #ccfbf1;
+  --bg: #f1f5f9; --card: #fff; --text: #1e293b; --muted: #64748b;
+  --border: #e2e8f0; --radius: 14px; --shadow: 0 2px 16px rgba(0,0,0,.07);
+}
+.back-link{color:var(--green);text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-bottom:20px}
+.back-link:hover{text-decoration:underline}
+.page-header{margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px}
+.page-header h2{font-size:24px;font-weight:700;color:var(--green)}
+.page-header p{color:var(--muted);font-size:13px;margin-top:4px}
+.btn-export{background:var(--green);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none;transition:.2s;font-weight:600}
+.btn-export:hover{background:var(--green-mid)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);border-left:4px solid transparent;position:relative;overflow:hidden;transition:.2s}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.1)}
+.kpi::after{content:"";position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.06}
+.kpi.green{border-color:var(--green)}.kpi.green::after{background:var(--green)}.kpi.green .kpi-num{color:var(--green)}
+.kpi.blue{border-color:#3b82f6}.kpi.blue::after{background:#3b82f6}.kpi.blue .kpi-num{color:#1d4ed8}
+.kpi.amber{border-color:#f59e0b}.kpi.amber::after{background:#f59e0b}.kpi.amber .kpi-num{color:#d97706}
+.kpi.red{border-color:#ef4444}.kpi.red::after{background:#ef4444}.kpi.red .kpi-num{color:#dc2626}
+.kpi.purple{border-color:#8b5cf6}.kpi.purple::after{background:#8b5cf6}.kpi.purple .kpi-num{color:#7c3aed}
+.kpi.teal{border-color:#14b8a6}.kpi.teal::after{background:#14b8a6}.kpi.teal .kpi-num{color:#0f766e}
+.kpi-icon{font-size:22px;margin-bottom:10px}
+.kpi-num{font-size:30px;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-lbl{font-size:12px;color:var(--muted);font-weight:500}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+.rpt-card{background:var(--card);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.rpt-card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:6px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:24px;align-items:stretch}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:24px;align-items:stretch}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:24px;align-items:stretch}
+.chart-container{position:relative;width:100%;overflow:hidden}
+.col-span-full{grid-column:1/-1}
+.chart-wrap{position:relative}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-center .big{font-size:26px;font-weight:800;color:var(--text)}
+.donut-center .sm{font-size:11px;color:var(--muted)}
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px}
+.prog-label{width:110px;color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog-track{flex:1;background:#f1f5f9;border-radius:6px;height:10px;overflow:hidden}
+.prog-fill{height:10px;border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.prog-meta{width:54px;text-align:right;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.gauge-ring{position:relative;width:120px;height:120px}
+.gauge-ring svg{transform:rotate(-90deg)}
+.gauge-ring .track{fill:none;stroke:#f1f5f9;stroke-width:12}
+.gauge-ring .fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.gauge-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gauge-label .val{font-size:20px;font-weight:800}
+.gauge-label .unit{font-size:11px;color:var(--muted)}
+.eval-item{margin-bottom:14px}
+.eval-header{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;font-weight:600}
+.eval-track{background:#f1f5f9;border-radius:6px;height:12px;overflow:hidden}
+.eval-fill{height:12px;border-radius:6px;transition:width 1s ease}
+.company-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.company-item:last-child{border:none}
+.company-rank{width:26px;height:26px;border-radius:50%;background:var(--green-light);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.company-rank.gold{background:#fef9c3;color:#92400e}.company-rank.silver{background:#f1f5f9;color:#475569}.company-rank.bronze{background:#ffedd5;color:#c2410c}
+.company-name-col{flex:1;font-weight:600;color:var(--text)}
+.company-bar-wrap{width:80px;background:#f1f5f9;border-radius:4px;height:6px}
+.company-bar-fill{height:6px;border-radius:4px;background:var(--green)}
+.company-count{min-width:52px;text-align:right;font-size:11px;font-weight:700;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:10px}
+.cgpa-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center}
+.cgpa-pill{background:var(--green-light);border-radius:10px;padding:12px 6px}
+.cgpa-pill .grade{font-size:14px;font-weight:800;color:var(--green)}
+.cgpa-pill .count{font-size:20px;font-weight:800;color:var(--text);margin:2px 0}
+.cgpa-pill .range{font-size:10px;color:var(--muted)}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;font-size:11px;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--border);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.data-table td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.data-table tr:last-child td{border:none}
+.data-table tr:hover td{background:#f8fafc}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-gray{background:#f1f5f9;color:#475569}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.stat-row{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.stat-chip{background:var(--green-light);border-radius:10px;padding:12px 18px;flex:1;min-width:100px;text-align:center}
+.stat-chip .n{font-size:22px;font-weight:800;color:var(--green)}
+.stat-chip .l{font-size:11px;color:var(--muted);margin-top:2px}
+@media(max-width:900px){.grid-3,.grid-2,.grid-2-1{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}.cgpa-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){.kpi-grid{grid-template-columns:1fr}.cgpa-grid{grid-template-columns:1fr 1fr}}
+</style>';
+require_once '_nav.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics — PMS</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
-  <style>
-    /* ── Reset & Base ─────────────────────────────────────── */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
-    :root {
-      --green: #1b5e20;
-      --green-mid: #2e7d32;
-      --green-light: #e8f5e9;
-      --blue: #1e40af;
-      --blue-light: #dbeafe;
-      --amber: #b45309;
-      --amber-light: #fef3c7;
-      --red: #be123c;
-      --red-light: #ffe4e6;
-      --purple: #6d28d9;
-      --purple-light: #ede9fe;
-      --teal: #0f766e;
-      --teal-light: #ccfbf1;
-      --bg: #f1f5f9;
-      --card: #fff;
-      --text: #1e293b;
-      --muted: #64748b;
-      --border: #e2e8f0;
-      --radius: 14px;
-      --shadow: 0 2px 16px rgba(0, 0, 0, .07);
-    }
-
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh
-    }
-
-    /* ── Navbar ───────────────────────────────────────────── */
-    .navbar {
-      background: linear-gradient(135deg, var(--green) 0%, #2e7d32 100%);
-      color: #fff;
-      padding: 0 32px;
-      height: 60px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 12px rgba(27, 94, 32, .3);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .navbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 17px;
-      font-weight: 700
-    }
-
-    .navbar-brand span {
-      font-size: 22px
-    }
-
-    .navbar-right {
-      display: flex;
-      align-items: center;
-      gap: 20px
-    }
-
-    .navbar-right a {
-      color: rgba(255, 255, 255, .85);
-      text-decoration: none;
-      font-size: 13px;
-      padding: 6px 14px;
-      border-radius: 6px;
-      transition: .2s;
-      border: 1px solid rgba(255, 255, 255, .2)
-    }
-
-    .navbar-right a:hover {
-      background: rgba(255, 255, 255, .15);
-      color: #fff
-    }
-
-    /* ── Page Wrap ────────────────────────────────────────── */
-    .wrap {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 32px 24px
-    }
-
-    /* ── Page Header ──────────────────────────────────────── */
-    .page-header {
-      margin-bottom: 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      flex-wrap: wrap;
-      gap: 12px
-    }
-
-    .page-header h2 {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--green)
-    }
-
-    .page-header p {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 4px
-    }
-
-    .btn-export {
-      background: var(--green);
-      color: #fff;
-      border: none;
-      padding: 9px 20px;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      text-decoration: none;
-      transition: .2s;
-      font-weight: 600;
-    }
-
-    .btn-export:hover {
-      background: var(--green-mid)
-    }
-
-    .back-link {
-      color: var(--green);
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 20px
-    }
-
-    .back-link:hover {
-      text-decoration: underline
-    }
-
-    /* ── KPI Cards ────────────────────────────────────────── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px
-    }
-
-    .kpi {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-      box-shadow: var(--shadow);
-      border-left: 4px solid transparent;
-      position: relative;
-      overflow: hidden;
-      transition: .2s;
-    }
-
-    .kpi:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, .1)
-    }
-
-    .kpi::after {
-      content: '';
-      position: absolute;
-      top: -20px;
-      right: -20px;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      opacity: .06;
-    }
-
-    .kpi.green {
-      border-color: var(--green)
-    }
-
-    .kpi.green::after {
-      background: var(--green)
-    }
-
-    .kpi.blue {
-      border-color: #3b82f6
-    }
-
-    .kpi.blue::after {
-      background: #3b82f6
-    }
-
-    .kpi.amber {
-      border-color: #f59e0b
-    }
-
-    .kpi.amber::after {
-      background: #f59e0b
-    }
-
-    .kpi.red {
-      border-color: #ef4444
-    }
-
-    .kpi.red::after {
-      background: #ef4444
-    }
-
-    .kpi.purple {
-      border-color: #8b5cf6
-    }
-
-    .kpi.purple::after {
-      background: #8b5cf6
-    }
-
-    .kpi.teal {
-      border-color: #14b8a6
-    }
-
-    .kpi.teal::after {
-      background: #14b8a6
-    }
-
-    .kpi-icon {
-      font-size: 22px;
-      margin-bottom: 10px
-    }
-
-    .kpi-num {
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 4px
-    }
-
-    .kpi.green .kpi-num {
-      color: var(--green)
-    }
-
-    .kpi.blue .kpi-num {
-      color: #1d4ed8
-    }
-
-    .kpi.amber .kpi-num {
-      color: #d97706
-    }
-
-    .kpi.red .kpi-num {
-      color: #dc2626
-    }
-
-    .kpi.purple .kpi-num {
-      color: #7c3aed
-    }
-
-    .kpi.teal .kpi-num {
-      color: #0f766e
-    }
-
-    .kpi-lbl {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500
-    }
-
-    .kpi-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid var(--border)
-    }
-
-    /* ── Section Title ────────────────────────────────────── */
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--muted);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border)
-    }
-
-    /* ── Card ─────────────────────────────────────────────── */
-    .card {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 22px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    /* ── Grid Layouts ─────────────────────────────────────── */
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 24px;
-      align-items: stretch;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      margin-bottom: 24px;
-      align-items: stretch;
-    }
-
-    .grid-2-1 {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-      margin-bottom: 24px;
-      align-items: stretch;
-    }
-
-    /* ── Chart Container ──────────────────────────────────── */
-    .chart-container {
-      position: relative;
-      width: 100%;
-    }
-
-    .col-span-full {
-      grid-column: 1/-1
-    }
-
-    /* ── Donut Center Label ───────────────────────────────── */
-    .chart-wrap {
-      position: relative
-    }
-
-    .donut-center {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      pointer-events: none;
-    }
-
-    .donut-center .big {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text)
-    }
-
-    .donut-center .sm {
-      font-size: 11px;
-      color: var(--muted)
-    }
-
-    /* ── Progress Bars ────────────────────────────────────── */
-    .prog-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      font-size: 13px
-    }
-
-    .prog-label {
-      width: 110px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis
-    }
-
-    .prog-track {
-      flex: 1;
-      background: #f1f5f9;
-      border-radius: 6px;
-      height: 10px;
-      overflow: hidden
-    }
-
-    .prog-fill {
-      height: 10px;
-      border-radius: 6px;
-      transition: width .8s cubic-bezier(.4, 0, .2, 1)
-    }
-
-    .prog-meta {
-      width: 54px;
-      text-align: right;
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 600;
-      white-space: nowrap
-    }
-
-    /* ── Gauge ────────────────────────────────────────────── */
-    .gauge-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px
-    }
-
-    .gauge-ring {
-      position: relative;
-      width: 120px;
-      height: 120px
-    }
-
-    .gauge-ring svg {
-      transform: rotate(-90deg)
-    }
-
-    .gauge-ring .track {
-      fill: none;
-      stroke: #f1f5f9;
-      stroke-width: 12
-    }
-
-    .gauge-ring .fill {
-      fill: none;
-      stroke-width: 12;
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1s ease
-    }
-
-    .gauge-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center
-    }
-
-    .gauge-label .val {
-      font-size: 20px;
-      font-weight: 800
-    }
-
-    .gauge-label .unit {
-      font-size: 11px;
-      color: var(--muted)
-    }
-
-    /* ── Eval Bars ────────────────────────────────────────── */
-    .eval-item {
-      margin-bottom: 14px
-    }
-
-    .eval-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 5px;
-      font-weight: 600
-    }
-
-    .eval-track {
-      background: #f1f5f9;
-      border-radius: 6px;
-      height: 12px;
-      overflow: hidden
-    }
-
-    .eval-fill {
-      height: 12px;
-      border-radius: 6px;
-      transition: width 1s ease
-    }
-
-    /* ── Company Badges ───────────────────────────────────── */
-    .company-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-
-    .company-item:last-child {
-      border: none
-    }
-
-    .company-rank {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: var(--green-light);
-      color: var(--green);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .company-rank.gold {
-      background: #fef9c3;
-      color: #92400e
-    }
-
-    .company-rank.silver {
-      background: #f1f5f9;
-      color: #475569
-    }
-
-    .company-rank.bronze {
-      background: #ffedd5;
-      color: #c2410c
-    }
-
-    .company-name-col {
-      flex: 1;
-      font-weight: 600;
-      color: var(--text)
-    }
-
-    .company-bar-wrap {
-      width: 80px;
-      background: #f1f5f9;
-      border-radius: 4px;
-      height: 6px
-    }
-
-    .company-bar-fill {
-      height: 6px;
-      border-radius: 4px;
-      background: var(--green)
-    }
-
-    .company-count {
-      min-width: 52px;
-      text-align: right;
-      font-size: 11px;
-      font-weight: 700;
-      background: var(--green-light);
-      color: var(--green);
-      padding: 2px 8px;
-      border-radius: 10px;
-    }
-
-    /* ── CGPA Pills ───────────────────────────────────────── */
-    .cgpa-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      text-align: center
-    }
-
-    .cgpa-pill {
-      background: var(--green-light);
-      border-radius: 10px;
-      padding: 12px 6px
-    }
-
-    .cgpa-pill .grade {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--green)
-    }
-
-    .cgpa-pill .count {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--text);
-      margin: 2px 0
-    }
-
-    .cgpa-pill .range {
-      font-size: 10px;
-      color: var(--muted)
-    }
-
-    /* ── Table ────────────────────────────────────────────── */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px
-    }
-
-    .data-table th {
-      text-align: left;
-      font-size: 11px;
-      color: var(--muted);
-      padding: 8px 12px;
-      border-bottom: 2px solid var(--border);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-
-    .data-table td {
-      padding: 11px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      vertical-align: middle
-    }
-
-    .data-table tr:last-child td {
-      border: none
-    }
-
-    .data-table tr:hover td {
-      background: #f8fafc
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700
-    }
-
-    .badge-green {
-      background: var(--green-light);
-      color: var(--green)
-    }
-
-    .badge-blue {
-      background: var(--blue-light);
-      color: var(--blue)
-    }
-
-    .badge-amber {
-      background: var(--amber-light);
-      color: var(--amber)
-    }
-
-    .badge-red {
-      background: var(--red-light);
-      color: var(--red)
-    }
-
-    .badge-gray {
-      background: #f1f5f9;
-      color: #475569
-    }
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      display: inline-block
-    }
-
-    /* ── Stat Row ─────────────────────────────────────────── */
-    .stat-row {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      flex-wrap: wrap
-    }
-
-    .stat-chip {
-      background: var(--green-light);
-      border-radius: 10px;
-      padding: 12px 18px;
-      flex: 1;
-      min-width: 100px;
-      text-align: center
-    }
-
-    .stat-chip .n {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--green)
-    }
-
-    .stat-chip .l {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px
-    }
-
-    /* ── Responsive ───────────────────────────────────────── */
-    @media(max-width:900px) {
-
-      .grid-3,
-      .grid-2,
-      .grid-2-1 {
-        grid-template-columns: 1fr
-      }
-
-      .kpi-grid {
-        grid-template-columns: 1fr 1fr
-      }
-
-      .navbar {
-        padding: 0 16px
-      }
-
-      .wrap {
-        padding: 20px 14px
-      }
-
-      .cgpa-grid {
-        grid-template-columns: repeat(3, 1fr)
-      }
-    }
-
-    @media(max-width:540px) {
-      .kpi-grid {
-        grid-template-columns: 1fr
-      }
-
-      .cgpa-grid {
-        grid-template-columns: 1fr 1fr
-      }
-    }
-  </style>
-</head>
-
-<body>
-
-  <!-- ── Navbar ──────────────────────────────────────────── -->
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <span>🎓</span> PMS — Placement Officer Portal
-    </div>
-    <div class="navbar-right">
-      <a href="dashboard.php">← Dashboard</a>
-      <a href="../logout.php">Logout</a>
-    </div>
-  </nav>
-
-  <div class="wrap">
-
-    <!-- ── Page Header ─────────────────────────────────── -->
-    <a class="back-link" href="dashboard.php">← Back to Dashboard</a>
-    <div class="page-header">
-      <div>
-        <h2>📊 Analytics & Placement Reports</h2>
-        <p>Real-time overview of placement activity · Generated <?= date('d M Y, h:i A') ?></p>
-      </div>
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="dashboard.php"><i class="bi bi-house me-1"></i>Dashboard</a></li>
+    <li class="breadcrumb-item active">Analytics & Reports</li>
+  </ol>
+</nav>
+
+<div class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+  <div>
+    <h1><i class="bi bi-bar-chart-line me-2"></i>Analytics & Placement Reports</h1>
+    <p class="sub mb-0">Real-time overview of placement activity · Generated <?= date('d M Y, h:i A') ?></p>
+  </div>
       <div style="position:relative;display:inline-block" id="exportDropdownWrap">
-        <button class="btn-export" onclick="toggleExportMenu()" type="button">⬇ Export ▾</button>
+        <button class="btn btn-pms btn-export d-flex align-items-center gap-1" onclick="toggleExportMenu()" type="button">
+          <i class="bi bi-download"></i> Export <i class="bi bi-chevron-down ms-1" style="font-size: 0.75rem;"></i>
+        </button>
         <div id="exportMenu"
           style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:190px;z-index:200;overflow:hidden">
           <button onclick="downloadHTML()"
@@ -1000,13 +339,13 @@ $js_cgpa = json_encode(array_values($cgpa));
     <!-- Application Status -->
     <div class="section-title">📄 Application Status</div>
     <div style="margin-bottom:24px">
-      <div class="card">
-        <div class="card-title">🗂 Application Status Breakdown</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">🗂 Application Status Breakdown</div>
         <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap">
 
           <!-- Donut -->
-          <div style="flex:0 0 200px;height:200px;position:relative;display:flex;justify-content:center">
-            <canvas id="statusChart"></canvas>
+          <div style="flex:0 0 220px;height:220px;position:relative;">
+            <canvas id="statusChart" style="width:220px;height:220px"></canvas>
             <div class="donut-center">
               <div class="big"><?= $total_apps ?></div>
               <div class="sm">Total</div>
@@ -1045,14 +384,14 @@ $js_cgpa = json_encode(array_values($cgpa));
     <div class="grid-2" style="margin-bottom:24px">
 
       <!-- Stat: Total Alumni -->
-      <div class="card" style="align-items:center;text-align:center">
+      <div class="rpt-card" style="align-items:center;text-align:center">
         <div style="font-size:38px;font-weight:800;color:var(--green)"><?= $alumni_total ?></div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">Alumni Registered</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">in the network</div>
       </div>
 
       <!-- Stat: Job Recommendations -->
-      <div class="card" style="align-items:center;text-align:center">
+      <div class="rpt-card" style="align-items:center;text-align:center">
         <div style="font-size:38px;font-weight:800;color:#7c3aed"><?= $alumni_rec_total ?></div>
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:4px">Job Tips Shared</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">by alumni network</div>
@@ -1063,8 +402,8 @@ $js_cgpa = json_encode(array_values($cgpa));
     <?php if (!empty($alumni_recs)): ?>
     <!-- Recent Alumni Job Recommendations -->
     <div class="grid-1" style="margin-bottom:24px">
-      <div class="card">
-        <div class="card-title">💼 Recent Alumni Job Recommendations</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">💼 Recent Alumni Job Recommendations</div>
         <table class="data-table">
           <thead>
             <tr>
@@ -1100,8 +439,8 @@ $js_cgpa = json_encode(array_values($cgpa));
     <div class="grid-2" style="margin-bottom:24px">
 
       <!-- Batch Bar -->
-      <div class="card">
-        <div class="card-title">📅 Batch-wise Placement</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">📅 Batch-wise Placement</div>
         <?php if (empty($batch_rows)): ?>
           <div
             style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px;flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column">
@@ -1116,8 +455,8 @@ $js_cgpa = json_encode(array_values($cgpa));
       </div>
 
       <!-- Placed vs Unplaced Horizontal Bar -->
-      <div class="card">
-        <div class="card-title">⚖️ Placed vs Unplaced</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">⚖️ Placed vs Unplaced</div>
         <div class="chart-container" style="height:220px">
           <canvas id="placedChart"></canvas>
         </div>
@@ -1129,8 +468,8 @@ $js_cgpa = json_encode(array_values($cgpa));
     <div class="grid-3" style="margin-bottom:24px">
 
       <!-- Top Companies -->
-      <div class="card">
-        <div class="card-title">🏢 Top Recruiting Companies</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">🏢 Top Recruiting Companies</div>
         <?php
         $max_c = max(array_merge($company_counts, [1]));
         $rank_class = ['gold', 'silver', 'bronze'];
@@ -1155,8 +494,8 @@ $js_cgpa = json_encode(array_values($cgpa));
       </div>
 
       <!-- CGPA Distribution -->
-      <div class="card">
-        <div class="card-title">🎓 CGPA Distribution</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">🎓 CGPA Distribution</div>
         <div class="chart-container" style="height:180px">
           <canvas id="cgpaChart"></canvas>
         </div>
@@ -1190,8 +529,8 @@ $js_cgpa = json_encode(array_values($cgpa));
       </div>
 
       <!-- Pre-placement Evaluation -->
-      <div class="card">
-        <div class="card-title">📝 Pre-placement Evaluation Avg</div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">📝 Pre-placement Evaluation Avg</div>
         <div style="margin-bottom:18px">
           <?php
           $evals = [
@@ -1250,8 +589,8 @@ $js_cgpa = json_encode(array_values($cgpa));
 
     <!-- ── Row 5: Recent Drives Table ──────────────────── -->
     <div class="section-title">🗓 Recent Drive Activity</div>
-    <div class="card" style="margin-bottom:24px">
-      <div class="card-title">📋 Recent Drives Summary</div>
+    <div class="rpt-card" style="margin-bottom:24px">
+      <div class="rpt-card-title">📋 Recent Drives Summary</div>
       <div style="overflow-x:auto">
         <table class="data-table">
           <thead>
@@ -1302,10 +641,11 @@ $js_cgpa = json_encode(array_values($cgpa));
       </div>
     </div>
 
-  </div><!-- /wrap -->
+
 
   <!-- ── Chart.js Scripts ──────────────────────────────── -->
   <script>
+  document.addEventListener('DOMContentLoaded', function() {
     Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
     Chart.defaults.color = '#64748b';
 
@@ -1455,6 +795,8 @@ $js_cgpa = json_encode(array_values($cgpa));
         }
       });
     }
+  }); // end DOMContentLoaded
+
     // ── Interactive HTML Export ──────────────────────────────
     async function downloadHTML() {
       document.getElementById('exportMenu').style.display = 'none';
@@ -1526,17 +868,23 @@ $js_cgpa = json_encode(array_values($cgpa));
         const expWrap = clone.querySelector('#exportDropdownWrap');
         if (expWrap) expWrap.remove();
 
-        // Remove back-link
-        const backLink = clone.querySelector('.back-link');
-        if (backLink) backLink.remove();
+        // Remove breadcrumb
+        const breadcrumb = clone.querySelector('nav[aria-label="breadcrumb"]');
+        if (breadcrumb) breadcrumb.remove();
 
-        // Stamp generated notice in navbar
-        const brand = clone.querySelector('.navbar-brand');
-        if (brand) brand.innerHTML += '<span style="font-size:11px;opacity:.7;font-weight:400;margin-left:16px">Downloaded <?= date('d M Y, h:i A') ?></span>';
-
-        // Remove nav links (not useful offline)
-        const navRight = clone.querySelector('.navbar-right');
-        if (navRight) navRight.innerHTML = '<span style="font-size:12px;opacity:.7">Placement Analytics Report</span>';
+        // Clean up the header-navbar
+        const headerNav = clone.querySelector('.header-navbar');
+        if (headerNav) {
+          const logoutLink = headerNav.querySelector('.logout-link');
+          if (logoutLink) logoutLink.remove();
+          const navLower = headerNav.querySelector('.nav-tier-lower');
+          if (navLower) navLower.remove();
+          
+          const userActions = headerNav.querySelector('.user-actions');
+          if (userActions) {
+            userActions.innerHTML = '<span style="font-size:12px;opacity:.8;color:#fff">Downloaded <?= htmlspecialchars(date("d M Y, h:i A")) ?></span>';
+          }
+        }
 
         // All the original chart data for re-initialisation
         const chartData = {
@@ -1605,7 +953,7 @@ ${chartJsTag}
 <style>
 ${styles}
 /* Downloaded report overrides */
-.navbar { position: relative !important; }
+.header-navbar { position: relative !important; }
 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 </style>
 </head>
@@ -1741,6 +1089,4 @@ ${clone.innerHTML}
 
   </script>
 
-</body>
-
-</html>
+<?php require '_nav_end.php'; ?>

@@ -8,41 +8,37 @@ $recs = mysqli_query($conn,
      FROM alumni_recommendation r
      JOIN alumni a ON r.alumni_id=a.alumni_id
      ORDER BY r.posted_at DESC");
+
+$pageTitle  = 'Alumni Tips';
+$activePage = 'alumni';
+require '_layout.php';
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Alumni Job Tips — PMS</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
-.navbar{background:#1a237e;color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.navbar h1{font-size:18px}.navbar a{color:#fff;text-decoration:none;font-size:13px}
-.content{padding:32px;max-width:920px;margin:0 auto}
-h2{color:#1a237e;margin-bottom:6px;font-size:20px}
-.sub{color:#666;font-size:13px;margin-bottom:24px}
-.grid{display:flex;flex-direction:column;gap:16px}
-.rec-card{background:#fff;border-radius:12px;padding:22px 26px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-left:4px solid #4a148c}
-.rec-title{font-size:16px;font-weight:700;color:#1a237e;margin-bottom:3px}
-.rec-company{font-size:13px;color:#555;margin-bottom:10px;font-weight:600}
-.rec-desc{font-size:13px;color:#555;line-height:1.6;margin-bottom:14px}
-.rec-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-.alumni-info{font-size:12px;color:#888}
-.alumni-info strong{color:#4a148c}
-.btn-link{background:#4a148c;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600}
-.btn-link:hover{background:#6a1b9a}
-.no-link{font-size:12px;color:#aaa}
-.back{display:inline-block;margin-bottom:18px;color:#1a237e;text-decoration:none;font-size:13px;font-weight:600}
-.empty{text-align:center;padding:60px;color:#888;font-size:14px;background:#fff;border-radius:12px}
-.chip{background:#f3e5f5;color:#4a148c;padding:3px 10px;border-radius:8px;font-size:11px;margin-right:6px}
-@media(max-width:600px){
-  .navbar{padding:12px 16px;}
-  .content{padding:20px 16px;}
-  .rec-footer{flex-direction:column;align-items:flex-start;gap:10px;}
-}
-</style></head><body>
-<div class="navbar"><h1>🎓 PMS — Student Portal</h1><a href="../logout.php">Logout</a></div>
-<div class="content">
-<a class="back" href="dashboard.php">← Back to Dashboard</a>
-<h2>🌐 Alumni Job Recommendations</h2>
-<p class="sub">Job opportunities shared by our alumni network. Click the link to apply directly.</p>
+.rec-card { background:#fff; border-radius:12px; padding:22px 26px; box-shadow:var(--card-shadow); border-left:4px solid var(--primary); margin-bottom:16px; transition:transform var(--transition); }
+.rec-card:hover { transform:translateY(-2px); }
+.rec-title { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:3px; }
+.rec-company { font-size:13px; color:var(--text); margin-bottom:10px; font-weight:600; }
+.rec-desc { font-size:13.5px; color:#555; line-height:1.6; margin-bottom:14px; }
+.rec-footer { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.alumni-info { font-size:12px; color:var(--muted); }
+.alumni-info strong { color:var(--primary); }
+.btn-link { background:var(--primary); color:#fff; padding:8px 18px; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600; transition:all var(--transition); display:inline-block; }
+.btn-link:hover { background:var(--primary-light); color:#fff; }
+.no-link { font-size:12px; color:#aaa; }
+.empty { text-align:center; padding:60px; color:var(--muted); font-size:14px; background:#fff; border-radius:12px; box-shadow:var(--card-shadow); }
+.chip { background:var(--accent-soft); color:var(--primary); padding:3px 10px; border-radius:8px; font-size:11px; margin-right:6px; font-weight:600; }
+</style>
+
+<a class="back-link" href="dashboard.php">
+  <span class="material-icons-round" style="font-size:16px; vertical-align:middle;">arrow_back</span>
+  Back to Dashboard
+</a>
+
+<div class="page-header">
+  <h1>🌐 Alumni Job Recommendations</h1>
+  <p>Job opportunities shared by our alumni network. Click the link to apply directly.</p>
+</div>
+
 <div class="grid">
 <?php $found=false; while ($r = mysqli_fetch_assoc($recs)): $found=true; ?>
 <div class="rec-card">
@@ -69,4 +65,6 @@ h2{color:#1a237e;margin-bottom:6px;font-size:20px}
 <div class="empty">No job recommendations yet.<br>Check back soon — alumni regularly share openings!</div>
 <?php endif; ?>
 </div>
-</div></body></html>
+
+<?php require '_layout_end.php'; ?>
+

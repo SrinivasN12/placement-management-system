@@ -280,6 +280,17 @@ run($conn, "CREATE TABLE IF NOT EXISTS preplacement_evaluation (
     FOREIGN KEY (student_id) REFERENCES student(student_id)
 )", "Table: preplacement_evaluation");
 
+// ── Password Reset OTP ───────────────────────────────────────
+run($conn, "CREATE TABLE IF NOT EXISTS password_reset_otp (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    email      VARCHAR(100) NOT NULL,
+    otp        VARCHAR(6)   NOT NULL,
+    expires_at DATETIME     NOT NULL,
+    used       TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_otp_email (email)
+)", "Table: password_reset_otp");
+
 // ── Sample Users ─────────────────────────────────────────────
 $hash = password_hash('password123', PASSWORD_DEFAULT);
 

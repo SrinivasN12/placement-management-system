@@ -15,7 +15,6 @@ $officer = mysqli_fetch_assoc(mysqli_query($conn,
      WHERE o.officer_id = $officer_id"));
 
 if (!$officer) {
-    // Fallback: load from user only
     $officer = mysqli_fetch_assoc(mysqli_query($conn,
         "SELECT *, '' AS department, '' AS phone FROM user WHERE user_id=$user_id"));
 }
@@ -26,18 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'profile') {
-        // ── Update profile info ────────────────────────────────
-        $new_name   = trim($_POST['name']);
-        $new_email  = trim($_POST['email']);
-        $new_dept   = trim($_POST['department'] ?? '');
-        $new_phone  = trim($_POST['phone'] ?? '');
+        $new_name  = trim($_POST['name']);
+        $new_email = trim($_POST['email']);
+        $new_dept  = trim($_POST['department'] ?? '');
+        $new_phone = trim($_POST['phone'] ?? '');
 
         if (strlen($new_name) < 2) {
             $error = "Name must be at least 2 characters.";
         } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
             $error = "Please enter a valid email address.";
         } else {
-            // Check email not taken by another user
             $esc_email = mysqli_real_escape_string($conn, $new_email);
             $dup = mysqli_fetch_assoc(mysqli_query($conn,
                 "SELECT user_id FROM user WHERE email='$esc_email' AND user_id != $user_id"));
@@ -48,23 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $esc_dept  = mysqli_real_escape_string($conn, $new_dept);
                 $esc_phone = mysqli_real_escape_string($conn, $new_phone);
 
-                // Update user table — email only (user has no name column)
-                mysqli_query($conn,
-                    "UPDATE user SET email='$esc_email' WHERE user_id=$user_id");
-
-                // Update placement_officer — name, department, phone
+                mysqli_query($conn, "UPDATE user SET email='$esc_email' WHERE user_id=$user_id");
                 mysqli_query($conn,
                     "UPDATE placement_officer
                      SET name='$esc_name', department='$esc_dept', phone='$esc_phone'
                      WHERE officer_id=$officer_id");
 
-                // Refresh session
                 $_SESSION['name']  = $new_name;
                 $_SESSION['email'] = $new_email;
-
                 $success = "Profile updated successfully!";
 
-                // Reload to show fresh values
                 $officer = mysqli_fetch_assoc(mysqli_query($conn,
                     "SELECT o.*, u.email
                      FROM placement_officer o
@@ -74,306 +64,404 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } elseif ($action === 'password') {
-        // ── Change password ────────────────────────────────────
         $cur  = $_POST['current_password'] ?? '';
         $new  = $_POST['new_password']     ?? '';
         $conf = $_POST['confirm_password'] ?? '';
 
-        // Load current hash
         $u = mysqli_fetch_assoc(mysqli_query($conn,
             "SELECT password FROM user WHERE user_id=$user_id"));
 
         if (!password_verify($cur, $u['password'])) {
             $error = "Current password is incorrect.";
-        } elseif (strlen($new) < 6) {
-            $error = "New password must be at least 6 characters.";
+        } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $new)) {
+            $error = "New password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.";
         } elseif ($new !== $conf) {
             $error = "New passwords do not match.";
         } else {
             $hash = password_hash($new, PASSWORD_DEFAULT);
-            $esc  = mysqli_real_escape_string($conn, $hash);
-            mysqli_query($conn, "UPDATE user SET password='$esc' WHERE user_id=$user_id");
+            $stmt_u = mysqli_prepare($conn, "UPDATE user SET password=? WHERE user_id=?");
+            mysqli_stmt_bind_param($stmt_u, "si", $hash, $user_id);
+            mysqli_stmt_execute($stmt_u);
+            mysqli_stmt_close($stmt_u);
             $success = "Password changed successfully!";
         }
     }
 }
 
-// Check if department/phone columns exist in placement_officer
+// Check / add department & phone columns
 $has_dept  = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM placement_officer LIKE 'department'")) > 0;
 $has_phone = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM placement_officer LIKE 'phone'")) > 0;
+if (!$has_dept)  { mysqli_query($conn, "ALTER TABLE placement_officer ADD COLUMN department VARCHAR(120) DEFAULT ''"); }
+if (!$has_phone) { mysqli_query($conn, "ALTER TABLE placement_officer ADD COLUMN phone VARCHAR(30) DEFAULT ''"); }
 
-// Add columns if missing (safe one-time migration)
-if (!$has_dept) {
-    mysqli_query($conn, "ALTER TABLE placement_officer ADD COLUMN department VARCHAR(120) DEFAULT ''");
-    $has_dept = true;
-}
-if (!$has_phone) {
-    mysqli_query($conn, "ALTER TABLE placement_officer ADD COLUMN phone VARCHAR(30) DEFAULT ''");
-    $has_phone = true;
-}
-?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Profile — TPO Portal</title>
+// Determine which tab to activate on page load
+$post_action = $_POST['action'] ?? '';
+$active_tab  = 'info';
+if ($error   && $post_action === 'profile')  $active_tab = 'edit';
+if ($error   && $post_action === 'password') $active_tab = 'password';
+if ($success && $post_action === 'password') $active_tab = 'password';
+
+$page_title  = 'My Profile — TPO Portal';
+$active_page = 'profile';
+
+$extra_head = <<<HTML
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
-.navbar{background:#1b5e20;color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center}
-.navbar h1{font-size:18px}.navbar a{color:#fff;text-decoration:none;font-size:13px}
-.page-wrap{max-width:860px;margin:0 auto;padding:32px 24px}
-.back{display:inline-block;margin-bottom:20px;color:#1b5e20;text-decoration:none;font-size:13px;font-weight:600}
+  .profile-hero {
+    background: linear-gradient(135deg, var(--pms-green) 0%, var(--pms-green-mid) 60%, var(--pms-green-light) 100%);
+    border-radius: 18px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+  }
+  .profile-hero::after {
+    content: '⚙';
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 120px;
+    opacity: .06;
+    pointer-events: none;
+  }
+  .avatar-circle {
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    border: 3px solid rgba(255,255,255,.45);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    padding: .25rem .75rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    margin-top: .5rem;
+    margin-right: .3rem;
+  }
+  /* Tab pills */
+  .profile-tabs .nav-link {
+    color: #555;
+    font-size: .82rem;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: .55rem 1.1rem;
+    transition: all .15s;
+  }
+  .profile-tabs .nav-link.active {
+    background: var(--pms-green);
+    color: #fff;
+  }
+  .profile-tabs .nav-link:hover:not(.active) { background: #f0f0f0; }
+  /* Info grid */
+  .info-lbl { font-size: .7rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .4px; }
+  .info-val  { font-size: .9rem; font-weight: 600; color: #222; }
+  /* Strength bar */
+  #strengthBar { height: 4px; border-radius: 2px; transition: width .3s, background .3s; width: 0; }
+</style>
+HTML;
 
-/* Profile hero */
-.profile-hero{background:linear-gradient(135deg,#1b5e20 0%,#2e7d32 60%,#388e3c 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;gap:24px;position:relative;overflow:hidden}
-.profile-hero::after{content:'⚙';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:100px;opacity:.06;pointer-events:none}
-.avatar-circle{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.25);border:3px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;flex-shrink:0}
-.hero-info h2{color:#fff;font-size:20px;font-weight:800;margin-bottom:3px}
-.hero-info p{color:rgba(255,255,255,.75);font-size:13px}
-.hero-badge{display:inline-block;background:rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px}
+require_once '_nav.php';
+?>
 
-/* Tabs */
-.tabs{display:flex;gap:0;margin-bottom:20px;background:#fff;border-radius:12px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-.tab-btn{flex:1;padding:10px 16px;border:none;background:none;border-radius:9px;font-size:13px;font-weight:600;color:#555;cursor:pointer;transition:all .15s}
-.tab-btn.active{background:#1b5e20;color:#fff}
-.tab-btn:hover:not(.active){background:#f5f5f5}
+<div class="page-content">
 
-/* Cards */
-.card{background:#fff;border-radius:14px;padding:26px 30px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:20px}
-.card h3{font-size:15px;font-weight:700;color:#1b5e20;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid #e8f5e9;display:flex;align-items:center;gap:8px}
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="dashboard.php"><i class="bi bi-house me-1"></i>Dashboard</a></li>
+      <li class="breadcrumb-item active">My Profile</li>
+    </ol>
+  </nav>
 
-/* Form */
-.form-row{display:flex;gap:16px;margin-bottom:0}
-.form-row .form-group{flex:1}
-.form-group{margin-bottom:16px}
-label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-input[type=text],input[type=email],input[type=tel],input[type=password]{
-    width:100%;padding:11px 14px;border:1.5px solid #e0e0e0;border-radius:8px;
-    font-size:14px;outline:none;font-family:inherit;transition:border-color .15s;background:#fafafa
-}
-input:focus{border-color:#1b5e20;background:#fff}
-.input-icon-wrap{position:relative}
-.input-icon-wrap input{padding-left:38px}
-.input-icon-wrap .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none}
-.hint{font-size:11px;color:#aaa;margin-top:4px}
-.btn-save{background:#1b5e20;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
-.btn-save:hover{background:#2e7d32;transform:translateY(-1px)}
+  <!-- Alerts -->
+  <?php if ($success): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="bi bi-check-circle me-1"></i><?= htmlspecialchars($success) ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <?php endif; ?>
+  <?php if ($error): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="bi bi-exclamation-triangle me-1"></i><?= htmlspecialchars($error) ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <?php endif; ?>
 
-/* Info display */
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
-.info-row{display:flex;flex-direction:column;padding:12px 0;border-bottom:1px solid #f5f5f5}
-.info-row:last-child{border-bottom:none}
-.info-lbl{font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-.info-val{font-size:14px;color:#333;font-weight:600}
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
 
-/* Alerts */
-.alert-success{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.alert-error{background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-
-/* Password strength */
-.strength-bar{height:4px;border-radius:2px;margin-top:6px;transition:width .3s,background .3s;width:0}
-
-/* Tab panels */
-.tab-panel{display:none}.tab-panel.active{display:block}
-
-@media(max-width:600px){
-  .navbar{padding:12px 16px}
-  .page-wrap{padding:20px 14px}
-  .profile-hero{flex-direction:column;text-align:center;padding:22px 18px}
-  .form-row{flex-direction:column;gap:0}
-  .info-grid{grid-template-columns:1fr}
-  .tabs{flex-direction:column}
-  .btn-save{width:100%}
-}
-</style></head><body>
-<div class="navbar"><h1>🏢 PMS — Placement Officer Portal</h1><a href="../logout.php">Logout</a></div>
-<div class="page-wrap">
-<a class="back" href="dashboard.php">← Back to Dashboard</a>
-
-<?php if ($success): ?>
-<div class="alert-success">✅ <?= htmlspecialchars($success) ?></div>
-<?php endif; ?>
-<?php if ($error): ?>
-<div class="alert-error">⚠ <?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
-
-<!-- Profile Hero -->
-<div class="profile-hero">
-  <div class="avatar-circle"><?= strtoupper(substr($officer['name'] ?? $name, 0, 1)) ?></div>
-  <div class="hero-info">
-    <h2><?= htmlspecialchars($officer['name'] ?? $name) ?></h2>
-    <p><?= htmlspecialchars($officer['email'] ?? $email) ?></p>
-    <span class="hero-badge">🏢 Placement Officer</span>
-    <?php if (!empty($officer['department'])): ?>
-      <span class="hero-badge"><?= htmlspecialchars($officer['department']) ?></span>
-    <?php endif; ?>
-  </div>
-</div>
-
-<!-- Tabs -->
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('info', this)">👤 Profile Info</button>
-  <button class="tab-btn" onclick="switchTab('edit', this)">✏️ Edit Details</button>
-  <button class="tab-btn" onclick="switchTab('password', this)">🔒 Change Password</button>
-</div>
-
-<!-- TAB: Account Info (read-only) -->
-<div class="tab-panel active" id="tab-info">
-  <div class="card">
-    <h3>📋 Account Information</h3>
-    <div class="info-grid">
-      <div class="info-row">
-        <span class="info-lbl">Full Name</span>
-        <span class="info-val"><?= htmlspecialchars($officer['name'] ?? $name) ?></span>
+      <!-- Profile Hero -->
+      <div class="profile-hero mb-4 d-flex align-items-center gap-4 flex-wrap">
+        <div class="avatar-circle">
+          <?= strtoupper(substr($officer['name'] ?? $name, 0, 1)) ?>
+        </div>
+        <div>
+          <h2 class="fw-800 mb-1" style="font-size:1.4rem">
+            <?= htmlspecialchars($officer['name'] ?? $name) ?>
+          </h2>
+          <div class="opacity-75 small"><?= htmlspecialchars($officer['email'] ?? $email) ?></div>
+          <div class="mt-1">
+            <span class="hero-badge"><i class="bi bi-building me-1"></i>Placement Officer</span>
+            <?php if (!empty($officer['department'])): ?>
+              <span class="hero-badge"><i class="bi bi-diagram-3 me-1"></i><?= htmlspecialchars($officer['department']) ?></span>
+            <?php endif; ?>
+          </div>
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-lbl">Email</span>
-        <span class="info-val"><?= htmlspecialchars($officer['email'] ?? $email) ?></span>
-      </div>
-      <div class="info-row">
-        <span class="info-lbl">Department</span>
-        <span class="info-val"><?= htmlspecialchars($officer['department'] ?? '') ?: '<span style="color:#aaa">Not set</span>' ?></span>
-      </div>
-      <div class="info-row">
-        <span class="info-lbl">Phone</span>
-        <span class="info-val"><?= htmlspecialchars($officer['phone'] ?? '') ?: '<span style="color:#aaa">Not set</span>' ?></span>
-      </div>
-      <div class="info-row">
-        <span class="info-lbl">Role</span>
-        <span class="info-val">Placement Officer</span>
-      </div>
-      <div class="info-row">
-        <span class="info-lbl">Officer ID</span>
-        <span class="info-val">#<?= $officer_id ?></span>
-      </div>
+
+      <!-- Tab Nav -->
+      <ul class="nav profile-tabs mb-3 bg-white rounded-3 p-2 shadow-sm" id="profileTabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link <?= $active_tab === 'info' ? 'active' : '' ?>"
+                  id="tab-info-btn" data-bs-toggle="tab" data-bs-target="#tab-info" type="button">
+            <i class="bi bi-person me-1"></i>Profile Info
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link <?= $active_tab === 'edit' ? 'active' : '' ?>"
+                  id="tab-edit-btn" data-bs-toggle="tab" data-bs-target="#tab-edit" type="button">
+            <i class="bi bi-pencil me-1"></i>Edit Details
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link <?= $active_tab === 'password' ? 'active' : '' ?>"
+                  id="tab-pwd-btn" data-bs-toggle="tab" data-bs-target="#tab-pwd" type="button">
+            <i class="bi bi-lock me-1"></i>Change Password
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+
+        <!-- TAB: Info -->
+        <div class="tab-pane fade <?= $active_tab === 'info' ? 'show active' : '' ?>" id="tab-info">
+          <div class="card pms-card">
+            <div class="card-header d-flex align-items-center gap-2">
+              <i class="bi bi-info-circle"></i> Account Information
+            </div>
+            <div class="card-body p-0">
+              <div class="row g-0">
+                <?php
+                $fields = [
+                  ['Full Name',    $officer['name']       ?? $name,   'bi-person'],
+                  ['Email',        $officer['email']      ?? $email,  'bi-envelope'],
+                  ['Department',   $officer['department'] ?? '',      'bi-diagram-3'],
+                  ['Phone',        $officer['phone']      ?? '',      'bi-telephone'],
+                  ['Role',         'Placement Officer',               'bi-briefcase'],
+                  ['Officer ID',   '#' . $officer_id,                 'bi-hash'],
+                ];
+                foreach ($fields as [$lbl, $val, $icon]):
+                ?>
+                <div class="col-12 col-sm-6">
+                  <div class="p-3 border-bottom border-end-sm d-flex align-items-start gap-3">
+                    <div class="mt-1">
+                      <i class="bi <?= $icon ?> text-success fs-5"></i>
+                    </div>
+                    <div>
+                      <div class="info-lbl"><?= $lbl ?></div>
+                      <div class="info-val">
+                        <?= $val ? htmlspecialchars($val) : '<span class="text-muted fst-italic small">Not set</span>' ?>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+            <div class="card-footer bg-white text-center border-0 py-3">
+              <a href="#" onclick="document.getElementById('tab-edit-btn').click();return false;"
+                 class="text-success fw-semibold small text-decoration-none">
+                <i class="bi bi-pencil me-1"></i>Edit your details →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Edit Profile -->
+        <div class="tab-pane fade <?= $active_tab === 'edit' ? 'show active' : '' ?>" id="tab-edit">
+          <div class="card pms-card">
+            <div class="card-header d-flex align-items-center gap-2">
+              <i class="bi bi-pencil-square"></i> Edit Profile Details
+            </div>
+            <div class="card-body p-4">
+              <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="profile">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-person me-1 text-success"></i>Full Name
+                    </label>
+                    <input type="text" class="form-control" name="name"
+                           value="<?= htmlspecialchars($officer['name'] ?? $name) ?>"
+                           required minlength="2" maxlength="100">
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-envelope me-1 text-success"></i>Email Address
+                    </label>
+                    <input type="email" class="form-control" name="email"
+                           value="<?= htmlspecialchars($officer['email'] ?? $email) ?>" required>
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-diagram-3 me-1 text-success"></i>Department
+                    </label>
+                    <input type="text" class="form-control" name="department"
+                           value="<?= htmlspecialchars($officer['department'] ?? '') ?>"
+                           placeholder="e.g. Training & Placement Cell" maxlength="120">
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-telephone me-1 text-success"></i>Phone Number
+                    </label>
+                    <input type="tel" class="form-control" name="phone"
+                           value="<?= htmlspecialchars($officer['phone'] ?? '') ?>"
+                           placeholder="e.g. +91 98765 43210" maxlength="30">
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-pms px-4">
+                  <i class="bi bi-floppy me-1"></i>Save Changes
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Change Password -->
+        <div class="tab-pane fade <?= $active_tab === 'password' ? 'show active' : '' ?>" id="tab-pwd">
+          <div class="card pms-card">
+            <div class="card-header d-flex align-items-center gap-2">
+              <i class="bi bi-lock"></i> Change Password
+            </div>
+            <div class="card-body p-4">
+              <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="password">
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">
+                    <i class="bi bi-key me-1 text-success"></i>Current Password
+                  </label>
+                  <input type="password" class="form-control" name="current_password"
+                         placeholder="Enter your current password" required>
+                </div>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-lock me-1 text-success"></i>New Password
+                    </label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" name="new_password" id="newPwd"
+                             placeholder="Min 8 characters" required minlength="8"
+                             oninput="updateStrength(this.value)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="togglePw('newPwd', this)">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                    <div id="strengthBar" class="mt-2"></div>
+                    <small class="text-muted d-block mt-1" id="strengthTxt"></small>
+                    <ul class="list-unstyled mt-2 ps-0" id="reqs" style="font-size: 0.75rem;">
+                      <li id="r-len" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> At least 8 characters</li>
+                      <li id="r-upper" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One uppercase letter (A–Z)</li>
+                      <li id="r-lower" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One lowercase letter (a–z)</li>
+                      <li id="r-digit" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One digit (0–9)</li>
+                      <li id="r-sym" class="text-muted"><i class="bi bi-x-circle-fill me-1 text-danger"></i> One special character (!@#$…)</li>
+                    </ul>
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">
+                      <i class="bi bi-lock-fill me-1 text-success"></i>Confirm New Password
+                    </label>
+                    <div class="input-group">
+                      <input type="password" class="form-control" name="confirm_password" id="confirmPwd"
+                             placeholder="Repeat new password" required minlength="8"
+                             oninput="checkMatch(this.value)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="togglePw('confirmPwd', this)">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                    <small class="d-block mt-1" id="matchTxt"></small>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-pms px-4">
+                  <i class="bi bi-shield-lock me-1"></i>Update Password
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
     </div>
   </div>
-  <p style="text-align:center;font-size:13px;color:#aaa">
-    <a href="#" onclick="switchTab('edit', document.querySelectorAll('.tab-btn')[1]);return false;" style="color:#1b5e20;font-weight:600">✏️ Edit your details →</a>
-  </p>
 </div>
 
-<!-- TAB: Edit Profile -->
-<div class="tab-panel" id="tab-edit">
-  <div class="card">
-    <h3>✏️ Edit Profile Details</h3>
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="action" value="profile">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Full Name</label>
-          <div class="input-icon-wrap">
-            <span class="icon">👤</span>
-            <input type="text" name="name" value="<?= htmlspecialchars($officer['name'] ?? $name) ?>" required minlength="2" maxlength="100">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Email Address</label>
-          <div class="input-icon-wrap">
-            <span class="icon">✉️</span>
-            <input type="email" name="email" value="<?= htmlspecialchars($officer['email'] ?? $email) ?>" required>
-          </div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Department</label>
-          <div class="input-icon-wrap">
-            <span class="icon">🏢</span>
-            <input type="text" name="department" value="<?= htmlspecialchars($officer['department'] ?? '') ?>" placeholder="e.g. Training & Placement Cell" maxlength="120">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Phone Number</label>
-          <div class="input-icon-wrap">
-            <span class="icon">📞</span>
-            <input type="tel" name="phone" value="<?= htmlspecialchars($officer['phone'] ?? '') ?>" placeholder="e.g. +91 98765 43210" maxlength="30">
-          </div>
-        </div>
-      </div>
-      <button type="submit" class="btn-save">💾 Save Changes</button>
-    </form>
-  </div>
-</div>
-
-<!-- TAB: Change Password -->
-<div class="tab-panel" id="tab-password">
-  <div class="card">
-    <h3>🔒 Change Password</h3>
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="action" value="password">
-      <div class="form-group">
-        <label>Current Password</label>
-        <div class="input-icon-wrap">
-          <span class="icon">🔑</span>
-          <input type="password" name="current_password" placeholder="Enter your current password" required>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>New Password</label>
-          <div class="input-icon-wrap">
-            <span class="icon">🔒</span>
-            <input type="password" name="new_password" id="newPwd" placeholder="Min 6 characters" required minlength="6"
-              oninput="updateStrength(this.value)">
-          </div>
-          <div class="strength-bar" id="strengthBar"></div>
-          <p class="hint" id="strengthTxt"></p>
-        </div>
-        <div class="form-group">
-          <label>Confirm New Password</label>
-          <div class="input-icon-wrap">
-            <span class="icon">🔒</span>
-            <input type="password" name="confirm_password" placeholder="Repeat new password" required minlength="6"
-              oninput="checkMatch(this.value)">
-          </div>
-          <p class="hint" id="matchTxt"></p>
-        </div>
-      </div>
-      <button type="submit" class="btn-save">🔒 Update Password</button>
-    </form>
-  </div>
-</div>
-
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  btn.classList.add('active');
-}
-
-// Auto-open edit or password tab based on server-side error/action
-<?php
-$post_action = $_POST['action'] ?? '';
-if ($error && $post_action === 'profile')  echo "switchTab('edit', document.querySelectorAll('.tab-btn')[1]);";
-if ($error && $post_action === 'password') echo "switchTab('password', document.querySelectorAll('.tab-btn')[2]);";
-if ($success && $post_action === 'password') echo "switchTab('password', document.querySelectorAll('.tab-btn')[2]);";
-?>
-
 function updateStrength(pw) {
   const bar = document.getElementById('strengthBar');
   const txt = document.getElementById('strengthTxt');
-  let score = 0;
-  if (pw.length >= 6)  score++;
-  if (pw.length >= 10) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  
+  const reqs = {
+    len: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    digit: /[0-9]/.test(pw),
+    sym: /[\W_]/.test(pw)
+  };
+  
+  const updateReq = (id, met) => {
+    const li = document.getElementById(id);
+    if (!li) return;
+    const icon = li.querySelector('i');
+    if (met) {
+      li.className = 'text-success fw-semibold';
+      if (icon) {
+        icon.className = 'bi bi-check-circle-fill text-success me-1';
+      }
+    } else {
+      li.className = 'text-muted';
+      if (icon) {
+        icon.className = 'bi bi-x-circle-fill text-danger me-1';
+      }
+    }
+  };
+  
+  updateReq('r-len', reqs.len);
+  updateReq('r-upper', reqs.upper);
+  updateReq('r-lower', reqs.lower);
+  updateReq('r-digit', reqs.digit);
+  updateReq('r-sym', reqs.sym);
+  
+  const score = Object.values(reqs).filter(Boolean).length; // 0..5
   const levels = [
+    {w:'0%', bg:'#e0e0e0', t:''},
     {w:'20%', bg:'#ef5350', t:'Very weak'},
     {w:'40%', bg:'#ff7043', t:'Weak'},
     {w:'60%', bg:'#ffa726', t:'Fair'},
     {w:'80%', bg:'#66bb6a', t:'Strong'},
-    {w:'100%',bg:'#2e7d32', t:'Very strong'},
+    {w:'100%', bg:'#2e7d32', t:'Very strong'},
   ];
-  const l = levels[Math.min(score, 4)];
+  
+  const l = levels[pw ? score : 0];
   bar.style.width = pw ? l.w : '0';
   bar.style.background = l.bg;
   txt.textContent = pw ? l.t : '';
   txt.style.color = l.bg;
+  
+  checkMatch(document.getElementById('confirmPwd').value);
 }
 
 function checkMatch(val) {
@@ -388,5 +476,45 @@ function checkMatch(val) {
     txt.style.color = '#c62828';
   }
 }
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (icon) {
+      icon.className = 'bi bi-eye-slash';
+    }
+  } else {
+    inp.type = 'password';
+    if (icon) {
+      icon.className = 'bi bi-eye';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const pwdFormInput = document.querySelector('form input[name="action"][value="password"]');
+  if (pwdFormInput) {
+    const pwdForm = pwdFormInput.closest('form');
+    if (pwdForm) {
+      pwdForm.addEventListener('submit', function(e) {
+        const pw = document.getElementById('newPwd').value;
+        const conf = document.getElementById('confirmPwd').value;
+        
+        const complexRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!complexRegex.test(pw)) {
+          e.preventDefault();
+          alert('New password must be at least 8 characters and include an uppercase letter, lowercase letter, digit, and special character.');
+        } else if (pw !== conf) {
+          e.preventDefault();
+          alert('Confirm password must match the new password.');
+        }
+      });
+    }
+  }
+});
 </script>
-</body></html>
+</body>
+</html>
