@@ -15,7 +15,14 @@ if (isset($_SESSION['user_id'])) {
   exit();
 }
 
-$error = "";
+$error   = "";
+$success = "";
+
+// Flash message from forgot_password.php after successful reset
+if (!empty($_SESSION['login_success'])) {
+  $success = $_SESSION['login_success'];
+  unset($_SESSION['login_success']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $submitted_token = $_POST['csrf_token'] ?? '';
@@ -147,6 +154,9 @@ function getRoleDashboard($role_id)
         <h1 class="auth-title" style="font-size:26px">Welcome Back</h1>
         <p class="auth-sub">Sign in to your PMS account</p>
 
+        <?php if ($success): ?>
+          <div class="alert-success"><?= $success ?></div>
+        <?php endif; ?>
         <?php if ($error): ?>
           <div class="alert-error">⚠ <?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
@@ -172,6 +182,9 @@ function getRoleDashboard($role_id)
           <button type="submit" class="btn-gold" style="width:100%;justify-content:center;padding:13px;font-size:15px">
             Sign In →
           </button>
+          <div style="text-align:right;margin-top:10px">
+            <a href="forgot_password.php" style="font-size:12px;color:var(--text-muted);text-decoration:none;font-weight:500">Forgot password?</a>
+          </div>
         </form>
 
         <div class="auth-link-row" style="margin-top:20px">

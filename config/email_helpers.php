@@ -473,3 +473,105 @@ function buildAlumniRecommendationEmail(
 </html>
 HTML;
 }
+
+// ── Helper 3: OTP Password Reset Email ───────────────────────
+
+/**
+ * Build the HTML body for a password-reset OTP email.
+ *
+ * @param  string $name           Recipient display name (student or alumni).
+ * @param  string $otp            6-digit OTP code.
+ * @param  int    $expiryMinutes  Minutes until the OTP expires (default 10).
+ * @return string                 Full HTML email body.
+ */
+function buildOtpEmail(string $name, string $otp, int $expiryMinutes = 10): string
+{
+    $name = htmlspecialchars($name);
+    $otp  = htmlspecialchars($otp);
+
+    return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <!-- Container -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+               style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.09);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0a1628;padding:32px 40px;text-align:center;">
+              <p style="margin:0;font-size:13px;color:#a8c4e0;letter-spacing:1px;text-transform:uppercase;">JSS DVH-IMSR Placement Portal</p>
+              <h1 style="margin:8px 0 0;font-size:22px;color:#ffffff;font-weight:700;">Password Reset</h1>
+              <p style="margin:6px 0 0;font-size:13px;color:#c9a84c;">🔐 One-Time Password (OTP)</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:32px 40px 0;">
+              <p style="margin:0;font-size:15px;color:#333333;">Dear <strong>{$name}</strong>,</p>
+              <p style="margin:12px 0 0;font-size:14px;color:#555555;line-height:1.7;">
+                We received a request to reset your PMS account password.
+                Use the OTP below to proceed. <strong>Do not share this code with anyone.</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- OTP Box -->
+          <tr>
+            <td style="padding:28px 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="background:linear-gradient(135deg,#0a1628,#112240);border-radius:12px;padding:32px;text-align:center;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 10px;font-size:12px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;font-weight:600;">Your OTP Code</p>
+                    <p style="margin:0;font-size:48px;font-weight:700;color:#ffffff;letter-spacing:12px;font-family:'Courier New',monospace;">{$otp}</p>
+                    <p style="margin:14px 0 0;font-size:13px;color:rgba(255,255,255,0.55);">
+                      ⏱ This code expires in <strong style="color:#c9a84c;">{$expiryMinutes} minutes</strong>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Warning -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table role="presentation" width="100%" cellpadding="14" cellspacing="0"
+                     style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;">
+                <tr>
+                  <td>
+                    <p style="margin:0;font-size:13px;color:#7a5a00;line-height:1.65;">
+                      ⚠ <strong>Didn't request this?</strong> If you did not initiate a password reset,
+                      please ignore this email. Your account remains secure and no changes were made.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f0f0f0;padding:22px 40px;text-align:center;border-top:1px solid #e0e0e0;">
+              <p style="margin:0;font-size:12px;color:#888888;font-weight:600;">JSS DVH-IMSR Placement Cell, Dharwad</p>
+              <p style="margin:4px 0 0;font-size:11px;color:#aaaaaa;">
+                This is an automated email from the Placement Management System.<br>
+                Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+HTML;
+}
