@@ -291,6 +291,7 @@ $_officerNav = [
 
     <?= $extra_head ?? '' ?>
   </style>
+  <?= $extra_scripts ?? '' ?>
 </head>
 <body>
 
