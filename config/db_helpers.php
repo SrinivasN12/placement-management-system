@@ -57,7 +57,8 @@ function mbaBatches(): array {
     $batches = [];
     // Window: 2 years back to 2 years ahead
     for ($start = $currentYear - 2; $start <= $currentYear + 2; $start++) {
-        $batches[] = $start . '-' . ($start + 2);
+        // Format: 2024-26 (2-digit end year — matches DB storage format)
+        $batches[] = $start . '-' . substr((string)($start + 2), 2);
     }
     return $batches;
 }

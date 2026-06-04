@@ -62,6 +62,19 @@ if ($existing) {
 $stu = mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT * FROM student WHERE student_id=$student_id"));
 
+// ── Preplacement gate (server-side enforcement) ──────────────
+// Must have an actual record in preplacement_evaluation with status 'Ready'
+$pe = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT overall_status FROM preplacement_evaluation WHERE student_id=$student_id"));
+if (!$pe || $pe['overall_status'] !== 'Ready') {
+    echo json_encode([
+        'success'  => false,
+        'failures' => ['⚠ You must complete your Pre-Placement Evaluation and be marked as "Ready" before applying for any placement drive. Please contact your Placement Officer.']
+    ]);
+    exit();
+}
+
+
 // ── Standard eligibility check ───────────────────────────────
 $failures = [];
 

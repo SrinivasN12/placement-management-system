@@ -12,6 +12,14 @@ autoCloseDrives($conn);
 $stu = mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT * FROM student WHERE student_id=$student_id"));
 
+// ── Preplacement evaluation gate ───────────────────────────────
+// Student MUST have an actual record in preplacement_evaluation
+// (i.e. officer must have entered marks). No record = blocked.
+$pe = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT overall_status FROM preplacement_evaluation WHERE student_id=$student_id"));
+// Only allow if record EXISTS and overall_status is explicitly 'Ready'
+$ppReady = ($pe !== false && ($pe['overall_status'] ?? '') === 'Ready');
+
 // Applied drive IDs
 $app_res = mysqli_query($conn,
     "SELECT drive_id FROM application WHERE student_id=$student_id");
@@ -169,6 +177,11 @@ $hasActive = false;
   <div class="actions">
     <?php if ($already): ?>
       <button class="btn-applied" disabled>✅ Applied</button>
+    <?php elseif (!$ppReady): ?>
+      <!-- ── Preplacement gate ── -->
+      <span class="elig-badge not-eligible" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80">
+        ⚠ Preplacement Evaluation Pending
+      </span>
     <?php elseif ($eligible): ?>
       <span class="elig-badge eligible">✅ Eligible</span>
       <button class="btn-apply" id="applybtn-<?= $did ?>"

@@ -322,10 +322,17 @@
     <span id="rubFileName">No file chosen</span>
   </div>
 
-  <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-    <input type="checkbox" id="rubOverwrite" style="width:15px;height:15px;cursor:pointer;accent-color:#4a6cf7;">
+  <div style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid transparent;">
+    <input type="checkbox" id="rubOverwrite" style="width:15px;height:15px;cursor:pointer;accent-color:#4a6cf7;flex-shrink:0;">
     <label for="rubOverwrite" style="font-size:12px;color:#444;cursor:pointer;margin:0;">
       ♻️ Overwrite existing profile data with values from resume
+    </label>
+  </div>
+
+  <div style="margin-top:2px;display:flex;align-items:center;gap:8px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;">
+    <input type="checkbox" id="rubAiConsent" style="width:15px;height:15px;cursor:pointer;accent-color:#4a6cf7;flex-shrink:0;">
+    <label for="rubAiConsent" style="font-size:12px;color:#5d4037;cursor:pointer;margin:0;">
+      🤖 I consent to send my resume data to AI for profile extraction.
     </label>
   </div>
 
@@ -406,6 +413,24 @@
     if (file.size > 2 * 1024 * 1024) {
       rubSetStatus('error', '❌ File exceeds 2 MB limit.');
       this.value = '';
+      return;
+    }
+
+    // ── AI Consent gate ──────────────────────────────────────────
+    var consentChecked = document.getElementById('rubAiConsent') &&
+      document.getElementById('rubAiConsent').checked;
+    if (!consentChecked) {
+      rubSetStatus('error', '⚠️ Please tick the AI consent checkbox before uploading your resume for AI parsing.');
+      this.value = '';
+      document.getElementById('rubFileName').textContent = 'No file chosen';
+      // Highlight the consent checkbox
+      var consentBox = document.getElementById('rubAiConsent');
+      if (consentBox) {
+        consentBox.closest('div').style.border = '2px solid #e65100';
+        setTimeout(function () {
+          consentBox.closest('div').style.border = '1px solid #ffe082';
+        }, 3000);
+      }
       return;
     }
 

@@ -11,8 +11,8 @@ $batch  = trim($_GET['batch']  ?? '');
 
 $where = "WHERE 1=1";
 if ($search) $where .= " AND (s.name LIKE '%" . mysqli_real_escape_string($conn,$search) . "%' OR u.email LIKE '%" . mysqli_real_escape_string($conn,$search) . "%')";
-if ($spec)   $where .= " AND s.specialization='" . mysqli_real_escape_string($conn,$spec) . "'";
-if ($batch)  $where .= " AND s.batch='" . mysqli_real_escape_string($conn,$batch) . "'";
+if ($spec)   $where .= " AND LOWER(TRIM(s.specialization)) = LOWER('" . mysqli_real_escape_string($conn,trim($spec)) . "')";
+if ($batch)  $where .= " AND TRIM(s.batch) = '" . mysqli_real_escape_string($conn,trim($batch)) . "'";
 
 $students = mysqli_query($conn,
     "SELECT s.*, u.email,
