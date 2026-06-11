@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (!isset($error) && $executed) {
+        if (empty($error) && $executed) {
             $drive_id = mysqli_insert_id($conn);
 
             // ── Save custom criteria ──────────────────────────────────
@@ -75,31 +75,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ccCount++;
             }
 
-            // Notify eligible students
-            $students = mysqli_query($conn,
-                "SELECT student_id FROM student
-                 WHERE cgpa >= $min_cgpa
-                   AND backlogs <= $max_bl
-                   AND tenth_percentage >= $min_tenth
-                   AND twelfth_percentage >= $min_twelfth
-                   AND degree_cgpa >= $min_deg");
-            $today   = date('Y-m-d');
-            $msg     = "New drive: $job_title at $company. Last date to apply: " . date('d M Y', strtotime($last_date)) . ". Check eligibility and apply!";
-            $msg_esc = mysqli_real_escape_string($conn, $msg);
-            while ($s = mysqli_fetch_assoc($students)) {
-                mysqli_query($conn,
-                    "INSERT INTO notification (student_id,message,is_read,date)
-                     VALUES ({$s['student_id']},'$msg_esc',0,'$today')");
-            }
             $ccNote  = $ccCount > 0 ? " with $ccCount custom criteri" . ($ccCount === 1 ? 'on' : 'a') : '';
-            $success = "Drive posted successfully{$ccNote}! Eligible students have been notified.";
 
-            // ── Send email notifications to eligible students ──
+            // ── Send email + in-app notifications to eligible students ──
+            // (send_placement_drive_emails handles both email delivery
+            //  and inserting rows into the notification table)
             try {
                 send_placement_drive_emails($drive_id, $conn);
             } catch (\Throwable $e) {
                 error_log('[post_drive.php] Email notification error: ' . $e->getMessage());
             }
+
+            $success = "Drive posted successfully{$ccNote}! Eligible students have been notified.";
         }
         mysqli_stmt_close($stmt);
     }

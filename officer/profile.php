@@ -127,10 +127,10 @@ $extra_head = <<<HTML
   .avatar-circle {
     width: 76px; height: 76px;
     border-radius: 50%;
-    background: rgba(255,255,255,.22);
-    border: 3px solid rgba(255,255,255,.45);
+    background: #ffffff;
+    border: 3px solid rgba(255,255,255,.9);
     display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; font-weight: 800; color: #fff;
+    font-size: 2rem; font-weight: 800; color: #222;
     flex-shrink: 0;
   }
   .hero-badge {
@@ -206,12 +206,7 @@ require_once '_nav.php';
             <?= htmlspecialchars($officer['name'] ?? $name) ?>
           </h2>
           <div class="opacity-75 small"><?= htmlspecialchars($officer['email'] ?? $email) ?></div>
-          <div class="mt-1">
-            <span class="hero-badge"><i class="bi bi-building me-1"></i>Placement Officer</span>
-            <?php if (!empty($officer['department'])): ?>
-              <span class="hero-badge"><i class="bi bi-diagram-3 me-1"></i><?= htmlspecialchars($officer['department']) ?></span>
-            <?php endif; ?>
-          </div>
+
         </div>
       </div>
 
