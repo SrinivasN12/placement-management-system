@@ -7,13 +7,18 @@ if ($role_id != 2) { header("Location: ../index.php"); exit(); }
 // ── Auto-close expired drives ─────────────────────────────────
 autoCloseDrives($conn);
 
-// ── Delete drive ──────────────────────────────────────────────
-if (isset($_GET['delete'])) {
-    $did = (int)$_GET['delete'];
-    mysqli_query($conn, "DELETE FROM ats_score WHERE drive_id=$did");
-    mysqli_query($conn, "DELETE FROM eligibility_result WHERE drive_id=$did");
-    mysqli_query($conn, "DELETE FROM application WHERE drive_id=$did");
-    mysqli_query($conn, "DELETE FROM placement_drive WHERE drive_id=$did");
+// ── Delete drive (POST + CSRF) ────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_drive_id'])) {
+    validate_csrf();
+    $did = (int)$_POST['delete_drive_id'];
+    if ($did > 0) {
+        mysqli_query($conn, "DELETE FROM drive_custom_criteria WHERE drive_id=$did");
+        mysqli_query($conn, "DELETE FROM student_custom_criteria_response WHERE drive_id=$did");
+        mysqli_query($conn, "DELETE FROM ats_score WHERE drive_id=$did");
+        mysqli_query($conn, "DELETE FROM eligibility_result WHERE drive_id=$did");
+        mysqli_query($conn, "DELETE FROM application WHERE drive_id=$did");
+        mysqli_query($conn, "DELETE FROM placement_drive WHERE drive_id=$did");
+    }
     header("Location: manage_drives.php?msg=deleted"); exit();
 }
 
@@ -123,12 +128,14 @@ require_once '_nav.php';
                  class="btn btn-outline-primary btn-sm me-1" title="Edit Drive">
                 <i class="bi bi-pencil"></i>
               </a>
-              <a href="manage_drives.php?delete=<?= $d['drive_id'] ?>"
-                 class="btn btn-outline-danger btn-sm"
-                 onclick="return confirm('Delete this drive and all its applications?')"
-                 title="Delete Drive">
-                <i class="bi bi-trash3"></i>
-              </a>
+              <form method="POST" style="display:inline"
+                    onsubmit="return confirm('Delete this drive and all its applications?')">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="delete_drive_id" value="<?= $d['drive_id'] ?>">
+                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Drive">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
             </td>
           </tr>
           <?php endwhile; ?>

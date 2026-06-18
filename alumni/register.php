@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_bind_param($s2, "iss", $uid, $name, $company);
             mysqli_stmt_execute($s2);
             mysqli_stmt_close($s2);
-            $success = "Registration successful! <a href='../login.php'>Login here</a>";
+            $success = "Registration successful!";
         }
         mysqli_stmt_close($chk);
     }
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($error): ?>
                     <div class="alert-error">⚠ <?= htmlspecialchars($error) ?></div><?php endif; ?>
                 <?php if ($success): ?>
-                    <div class="alert-success">✅ <?= $success ?></div><?php endif; ?>
+                    <div class="alert-success">✅ <?= htmlspecialchars($success) ?> <a href="../login.php" style="color:var(--success);font-weight:700">Login here →</a></div><?php endif; ?>
                 <?php if (!$success): ?>
                     <form method="POST" id="registerForm" novalidate>
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
